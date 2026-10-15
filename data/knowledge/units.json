@@ -1,0 +1,30 @@
+{
+  "version": "1.0.0",
+  "base_units": {
+    "M": "[mass]",
+    "L": "[length]",
+    "T": "[time]",
+    "I": "[electric_current]",
+    "Θ": "[temperature]",
+    "N": "[amount_of_substance]",
+    "J": "[luminous_intensity]"
+  },
+  "derived_units": {
+    "N": {"dim": ["M", "L", "T", "-2"], "name": "newton"},
+    "J": {"dim": ["M", "L", "2", "T", "-2"], "name": "joule"},
+    "W": {"dim": ["M", "L", "2", "T", "-3"], "name": "watt"},
+    "Pa": {"dim": ["M", "L", "-1", "T", "-2"], "name": "pascal"},
+    "Hz": {"dim": ["T", "-1"], "name": "hertz"},
+    "C": {"dim": ["I", "T"], "name": "coulomb"},
+    "V": {"dim": ["M", "L", "2", "T", "-3", "I", "-1"], "name": "volt"},
+    "F": {"dim": ["M", "-1", "L", "-2", "T", "4", "I", "2"], "name": "farad"},
+    "Ω": {"dim": ["M", "L", "2", "T", "-3", "I", "-2"], "name": "ohm"},
+    "m": {"dim": ["L"], "name": "meter"},
+    "kg": {"dim": ["M"], "name": "kilogram"},
+    "s": {"dim": ["T"], "name": "second"},
+    "A": {"dim": ["I"], "name": "ampere"},
+    "rad": {"dim": [], "name": "radian"},
+    "sr": {"dim": [], "name": "steradian"},
+    "Hz": {"dim": ["T", "-1"], "name": "hertz"}
+  }
+}

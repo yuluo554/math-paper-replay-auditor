@@ -1,0 +1,51 @@
+[project]
+name = "math-paper-replay-auditor"
+version = "0.1.0"
+description = "数学论文可验证重放审计器——首个面向 openPangu-2.0-Flash 的论文数学断言审计工具"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.8"
+dependencies = [
+    "sympy>=1.12",
+    "mpmath>=1.3",
+    "pydantic>=2.0",
+]
+
+[project.optional-dependencies]
+core = [
+    "sympy>=1.12",
+    "mpmath>=1.3",
+    "pydantic>=2.0",
+]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "ruff>=0.1.0",
+]
+gui = [
+    "PySide6>=6.6.3.1,<6.7",
+]
+build = [
+    "PyInstaller>=6.22.3",
+    "setuptools<81",
+]
+all = [
+    "auditor[core,dev,gui,build]",
+]
+
+[project.scripts]
+auditor = "auditor.cli:main"
+
+[project.entry-points."auditor.gui"]
+main = "auditor.gui.main_window:run_gui"
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --tb=short"

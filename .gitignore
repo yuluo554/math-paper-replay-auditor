@@ -53,3 +53,21 @@ model_cache/
 data/raw_eprint/
 *.tar.gz
 *.tex.bak
+
+# Demo assets (regenerated)
+docs/demo/*.gif
+docs/demo/*.png
+
+# Data (local only, not in repo)
+data/real_papers/*.tex
+data/real_papers/*.pdf
+data/real_papers/*.gz
+data/benchmark/snapshots/*.bin
+data/**/_private/
+data/**/raw/
+
+# Logs / temp
+logs/
+*.log
+tmp/
+*.tmp

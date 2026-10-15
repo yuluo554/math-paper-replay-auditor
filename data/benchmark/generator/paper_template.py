@@ -1,0 +1,75 @@
+"""合成论文 LaTeX 模板。
+
+生成完整论文骨架：section / equation / theorem / lemma / proof / table / ref / label。
+"""
+
+from __future__ import annotations
+
+from typing import Dict, Any
+from .deterministic_rng import SplitMix64
+
+
+PAPER_TEMPLATE = r"""\documentclass{{article}}
+\usepackage{{amsmath, amssymb, physics}}
+
+\title{{Synthetic Paper for Benchmark {sample_id}}}
+\author{{A. Example \\ Example University}}
+\date{{\today}}
+
+\begin{{document}}
+\maketitle
+
+\section{{Introduction}}
+This is a synthetic paper for benchmarking the math paper replay auditor.
+
+\section{{Main Results}}
+\begin{{theorem}}[Main Theorem]
+\label{{thm:main}}
+Let $f(x) = e^x$. Then for all $x \in \mathbb{{R}}$, we have
+\begin{{equation}}
+\label{{eq:main}}
+f'(x) = f(x).
+\end{{equation}}
+\end{{theorem}}
+
+\begin{{proof}}
+By definition of the derivative,
+\begin{{equation}}
+\label{{eq:deriv}}
+f'(x) = \lim_{{h \to 0}} \frac{{f(x+h) - f(x)}}{{h}} = \lim_{{h \to 0}} \frac{{e^{{x+h}} - e^x}}{{h}} = e^x \lim_{{h \to 0}} \frac{{e^h - 1}}{{h}} = e^x.
+\end{{equation}}
+\end{{proof}}
+
+\begin{{lemma}}[Auxiliary Lemma]
+\label{{lem:aux}}
+For all $x \in \mathbb{{R}}$, $e^x > 0$.
+\end{{lemma}}
+
+\begin{{corollary}}
+\label{{cor:result}}
+From Theorem~\ref{{thm:main}} and Lemma~\ref{{lem:aux}}, $f'(x) > 0$ for all $x \in \mathbb{{R}}$.
+\end{{corollary}}
+
+\section{{Numerical Examples}}
+\begin{{table}}[h]
+\centering
+\begin{{tabular}}{{|c|c|}}
+\hline
+$x$ & $f(x)$ \\
+\hline
+0 & 1.00000 \\
+1 & 2.71828 \\
+2 & 7.38906 \\
+\hline
+\end{{tabular}}
+\caption{{Numerical example for $f(x) = e^x$}}
+\end{{table}}
+
+\end{{document}}
+"""
+
+
+def generate_paper(sample_id: str, seed: int = 42) -> str:
+    """生成合成论文 LaTeX。"""
+    rng = SplitMix64(seed)
+    return PAPER_TEMPLATE.format(sample_id=sample_id)

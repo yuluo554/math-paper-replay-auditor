@@ -1,0 +1,16 @@
+{
+  "version": "1.0.0",
+  "description": "真实论文回归集元数据（不随仓分发全文）",
+  "papers": [
+    {
+      "paper_id": "arXiv:XXXX.XXXXX",
+      "version": 1,
+      "source": "arXiv",
+      "has_erratum": false,
+      "erratum_url": null,
+      "local_parse_sha256": null,
+      "is_clean": true,
+      "notes": "用于验证误报率 0"
+    }
+  ]
+}
