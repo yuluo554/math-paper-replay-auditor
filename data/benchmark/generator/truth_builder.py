@@ -82,7 +82,7 @@ def generate_all(
         for j in range(count):
             seed = base_seed + i * 100 + j
             entry = generate_sample(
-                f"B{i+1:03d}",
+                f"B{i+1:03d}-{j+1:03d}",
                 error_type,
                 seed,
                 output_dir,

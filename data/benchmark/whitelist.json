@@ -1,0 +1,22 @@
+{
+  "version": "1.0.0",
+  "description": "合成基准假数据白名单——单一事实源（K36）。所有生成器必须从此文件取值，禁止硬编码。",
+  "fake_doi_prefix": "10.9999",
+  "fake_arXiv_prefix": "2400.00000",
+  "fake_orcid_prefix": "0000-9999",
+  "fake_institutions": [
+    "Example University",
+    "Synthetic Institute of Mathematics",
+    "Benchmark College"
+  ],
+  "fake_authors": [
+    "A. Example",
+    "B. Synthetic",
+    "C. Benchmark"
+  ],
+  "fake_journals": [
+    "Journal of Synthetic Mathematics",
+    "Proceedings of the Benchmark Conference"
+  ],
+  "notes": "所有条目均为合成数据，不对应任何真实实体。"
+}

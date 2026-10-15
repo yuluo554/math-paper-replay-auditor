@@ -1,0 +1,30 @@
+{
+  "total_samples": 18,
+  "sampling_note": "抽样覆盖非穷举",
+  "by_error_type": {
+    "dimension_mismatch": {
+      "total": 3,
+      "min_required": 3
+    },
+    "illegal_derivation": {
+      "total": 3,
+      "min_required": 3
+    },
+    "numeric_mismatch": {
+      "total": 3,
+      "min_required": 3
+    },
+    "dangling_ref": {
+      "total": 3,
+      "min_required": 3
+    },
+    "dep_chain_break": {
+      "total": 3,
+      "min_required": 3
+    },
+    "clean": {
+      "total": 3,
+      "min_required": 3
+    }
+  }
+}

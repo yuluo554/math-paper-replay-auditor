@@ -69,8 +69,7 @@ def inject_dangling_ref(tex: str, seed: int) -> tuple[str, Any]:
     rng = SplitMix64(seed)
     # 删除 lem:aux 定义，但保留 cor:result 中的引用
     modified = tex.replace(
-        "\\begin{lemma}[Auxiliary Lemma]
-\\label{lem:aux}",
+        "\\begin{lemma}[Auxiliary Lemma]\n\\label{lem:aux}",
         "\\begin{lemma}[Auxiliary Lemma]"
     )
     # 实际删除 label 行
@@ -92,10 +91,7 @@ def inject_dep_chain_break(tex: str, seed: int) -> tuple[str, Dict[str, Any]]:
     rng = SplitMix64(seed)
     # 删除 lem:aux 整个 lemma 环境
     modified = tex.replace(
-        "\\begin{lemma}[Auxiliary Lemma]
-\\label{lem:aux}
-For all $x \\in \\mathbb{R}$, $e^x > 0$.
-\\end{lemma}",
+        "\\begin{lemma}[Auxiliary Lemma]\\n\\label{lem:aux}\\nFor all $x \\in \\mathbb{R}$, $e^x > 0$.\\n\\end{lemma}",
         ""
     )
     truth = {
