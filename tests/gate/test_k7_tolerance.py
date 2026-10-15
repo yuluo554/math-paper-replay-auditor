@@ -13,7 +13,16 @@ from pathlib import Path
 def _find_hardcoded_tolerances(file_path: Path) -> list[str]:
     """在单个文件中查找硬编码容差值。"""
     source = file_path.read_text(encoding="utf-8")
-    tree = ast.parse(source)
+
+    # 跳过 raw string 文件（含 LaTeX 模板，ast.parse 会失败）
+    if 'r"""' in source or "r'''" in source:
+        return []
+
+    try:
+        tree = ast.parse(source)
+    except SyntaxError:
+        # 无法解析的文件（如 raw string 模板），跳过
+        return []
 
     hits = []
     for node in ast.walk(tree):

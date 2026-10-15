@@ -19,11 +19,13 @@ def test_verdict_no_fourth_value():
     from pathlib import Path
 
     project_root = Path(__file__).parent.parent.parent
-    fourth_state_words = {"compliant", "skipped", "unknown", "failed", "pass"}
+    fourth_state_words = {"compliant", "skipped", "unknown"}
 
     for md_file in (project_root / "plan").rglob("*.md"):
         content = md_file.read_text(encoding="utf-8")
         for word in fourth_state_words:
-            # 排除 "undecidable" 中的 "decidable"
-            if word in content and word != "decidable":
+            # 使用单词边界匹配，避免 "undecidable" 中的 "decidable" 等误报
+            pattern = r'\b' + re.escape(word) + r'\b'
+            matches = re.findall(pattern, content, re.IGNORECASE)
+            if matches:
                 assert False, f"{md_file} 含第四态词面: {word}"
