@@ -4,7 +4,8 @@
     {"source": "data/benchmark/truth.json", "target": "data/", "type": "file"},
     {"source": "data/benchmark/manifest.json", "target": "data/", "type": "file"},
     {"source": "data/benchmark/samples/", "target": "data/samples/", "type": "dir"},
-    {"source": "data/knowledge/units.json", "target": "data/knowledge/", "type": "file"}
+    {"source": "data/knowledge/units.json", "target": "data/knowledge/", "type": "file"},
+    {"source": "data/real_papers/registry.json", "target": "data/", "type": "file"}
   ],
   "excluded": [
     "data/**/_private/",

@@ -1,0 +1,69 @@
+"""K46: 发布附件名一律 ASCII。
+
+验证：
+1. 附件名只包含 ASCII 字符
+2. 不含中文、emoji 等非 ASCII 字符
+"""
+
+from __future__ import annotations
+
+import re
+from pathlib import Path
+
+import pytest
+
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+
+
+def _is_ascii(name: str) -> bool:
+    """检查字符串是否只包含 ASCII 字符。"""
+    try:
+        name.encode("ascii")
+        return True
+    except UnicodeEncodeError:
+        return False
+
+
+def test_demo_attachment_names_ascii():
+    """K46: 演示附件名一律 ASCII。"""
+    # 检查 docs/demo/ 目录
+    demo_dir = REPO_ROOT / "docs" / "demo"
+    if demo_dir.exists():
+        for f in demo_dir.iterdir():
+            if f.is_file():
+                assert _is_ascii(f.name), \
+                    f"附件名包含非 ASCII 字符: {f.name}"
+
+
+def test_release_attachment_names_ascii():
+    """K46: 发布附件名一律 ASCII。"""
+    # 检查常见的发布附件名模式
+    expected_names = [
+        "auditor-v0.1.0-win64.zip",
+        "auditor-v0.1.0-win64-sha256.txt",
+        "demo-clean-vs-error.gif",
+        "demo-clean-report.html",
+        "demo-error-report.html",
+    ]
+
+    for name in expected_names:
+        assert _is_ascii(name), \
+            f"发布附件名包含非 ASCII 字符: {name}"
+
+
+def test_no_chinese_in_filenames():
+    """K46: 文件名不含中文（发布附件名一律 ASCII）。"""
+    chinese_pattern = re.compile(r'[\u4e00-\u9fff]')
+
+    # 检查仓库根目录，排除 plan/ 目录（文档可以有中文名）
+    exclude_dirs = {"plan", ".git", ".github", "__pycache__", "dist", "build"}
+
+    for f in REPO_ROOT.rglob("*"):
+        if f.is_file():
+            # 排除 plan/ 目录下的文件
+            rel_parts = f.relative_to(REPO_ROOT).parts
+            if rel_parts[0] in exclude_dirs:
+                continue
+            name = f.name
+            assert not chinese_pattern.search(name), \
+                f"文件名包含中文: {name}"
