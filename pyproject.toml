@@ -9,7 +9,11 @@ dependencies = [
     "sympy>=1.12",
     "mpmath>=1.3",
     "pydantic>=2.0",
-    "antlr4-python3-runtime>=4.11,<4.14",
+    # sympy 的 LaTeX 解析器硬校验运行时版本必须为 4.11.x
+    # （sympy/parsing/latex/_parse_latex_antlr.py 内 version().startswith('4.11')），
+    # 放宽到 4.11–4.13 会让 pip 选到 4.13 → parse_latex 抛 ImportError
+    # → 符号重放静默退化、illegal_derivation 类漏检（干净环境实测）。
+    "antlr4-python3-runtime>=4.11,<4.12",
 ]
 
 [project.optional-dependencies]
@@ -17,7 +21,7 @@ core = [
     "sympy>=1.12",
     "mpmath>=1.3",
     "pydantic>=2.0",
-    "antlr4-python3-runtime>=4.11,<4.14",
+    "antlr4-python3-runtime>=4.11,<4.12",
 ]
 dev = [
     "pytest>=7.0",

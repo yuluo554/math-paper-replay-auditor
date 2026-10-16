@@ -1,0 +1,51 @@
+name: CI
+
+on: [push, pull_request, workflow_dispatch]
+
+env:
+  # 编码守卫：CI 管道默认不是 UTF-8（如 cp1252），
+  # 测试内部打印中文会 UnicodeEncodeError。本机靠 `py -X utf8` 掩盖了这个缺口。
+  PYTHONUTF8: "1"
+  PYTHONIOENCODING: "utf-8"
+
+jobs:
+  test:
+    name: ${{ matrix.os }} / py${{ matrix.python }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            python: "3.8"
+          - os: windows-latest
+            python: "3.12"
+          - os: ubuntu-latest
+            python: "3.12"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: 安装（与 README 同一 extras 集合）
+        run: |
+          python -m pip install -U pip setuptools wheel
+          python -m pip install -e ".[dev,core]"
+
+      - name: 冒烟 - 包级调用（README 头号形态，需 __main__.py）
+        run: python -m auditor selftest
+
+      - name: 冒烟 - 裸 console script（安装面第四面）
+        run: auditor selftest
+
+      - name: 基准（检出率 / 误报率 / 逐类覆盖）
+        run: python -m auditor bench
+
+      - name: 审计冒烟（干净论文应 exit 0）
+        run: python -m auditor audit --input data/benchmark/C001-clean/paper.tex
+
+      - name: 全量测试
+        run: python -m pytest tests/ -q

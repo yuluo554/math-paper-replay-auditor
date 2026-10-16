@@ -36,8 +36,14 @@ def generate_sample(
     error_type: str,
     seed: int,
     output_dir: Path,
+    path_prefix: str = "data/benchmark",
 ) -> Dict[str, Any]:
-    """生成一个样本（论文 + 真值条目）。"""
+    """生成一个样本（论文 + 真值条目）。
+
+    Args:
+        path_prefix: 真值库中 paper_tex 的规范前缀（仓库相对 POSIX）。
+            与 output_dir 解耦，使产物**不随生成位置变化**（K20 位级一致）。
+    """
     # 1. 生成基础论文
     base_tex = generate_paper(sample_id, seed)
 
@@ -46,15 +52,21 @@ def generate_sample(
     modified_tex, truth = injector(base_tex, seed)
 
     # 3. 落盘论文
-    sample_dir = output_dir / f"{sample_id}-{error_type}"
+    sample_name = f"{sample_id}-{error_type}"
+    sample_dir = output_dir / sample_name
     sample_dir.mkdir(parents=True, exist_ok=True)
-    (sample_dir / "paper.tex").write_text(modified_tex, encoding="utf-8")
+    # 行尾一律 LF：Windows 文本模式会把 \n 翻成 \r\n，使"跨平台位级一致"失效。
+    # Path.write_text(newline=) 是 3.10+ 参数，3.8 底线须走 open(newline="")。
+    with open(sample_dir / "paper.tex", "w", encoding="utf-8", newline="") as f:
+        f.write(modified_tex.replace("\r\n", "\n").replace("\r", "\n"))
 
     # 4. 构建真值条目
+    # paper_tex 一律写**规范仓库相对 POSIX 路径**：绝对路径或含盘符路径会让
+    # 产物随输出目录变化（跨机/跨平台位级不一致），冻结态还要另做路径翻译。
     entry = {
-        "sample_id": f"{sample_id}-{error_type}",
+        "sample_id": sample_name,
         "input_card": {
-            "paper_tex": str(sample_dir / "paper.tex"),
+            "paper_tex": f"{path_prefix}/{sample_name}/paper.tex",
             "paper_id": f"synth-{sample_id}",
         },
         "expect": truth,

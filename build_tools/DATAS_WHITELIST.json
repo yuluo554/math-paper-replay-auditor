@@ -1,0 +1,33 @@
+{
+  "version": "1.1.0",
+  "description": "入包数据白名单——单一事实源（K36/K37/K38）。target 一律镜像 source 的仓库相对路径，使冻结态与源码态路径结构完全一致（防冻结态路径解析分叉）。",
+  "entries": [
+    {"source": "data/benchmark/truth.json", "target": "data/benchmark/", "type": "file"},
+    {"source": "data/benchmark/manifest.json", "target": "data/benchmark/", "type": "file"},
+    {"source": "data/benchmark/B001-001-dimension_mismatch", "target": "data/benchmark/B001-001-dimension_mismatch", "type": "dir"},
+    {"source": "data/benchmark/B001-002-dimension_mismatch", "target": "data/benchmark/B001-002-dimension_mismatch", "type": "dir"},
+    {"source": "data/benchmark/B001-003-dimension_mismatch", "target": "data/benchmark/B001-003-dimension_mismatch", "type": "dir"},
+    {"source": "data/benchmark/B002-001-illegal_derivation", "target": "data/benchmark/B002-001-illegal_derivation", "type": "dir"},
+    {"source": "data/benchmark/B002-002-illegal_derivation", "target": "data/benchmark/B002-002-illegal_derivation", "type": "dir"},
+    {"source": "data/benchmark/B002-003-illegal_derivation", "target": "data/benchmark/B002-003-illegal_derivation", "type": "dir"},
+    {"source": "data/benchmark/B003-001-numeric_mismatch", "target": "data/benchmark/B003-001-numeric_mismatch", "type": "dir"},
+    {"source": "data/benchmark/B003-002-numeric_mismatch", "target": "data/benchmark/B003-002-numeric_mismatch", "type": "dir"},
+    {"source": "data/benchmark/B003-003-numeric_mismatch", "target": "data/benchmark/B003-003-numeric_mismatch", "type": "dir"},
+    {"source": "data/benchmark/B004-001-dangling_ref", "target": "data/benchmark/B004-001-dangling_ref", "type": "dir"},
+    {"source": "data/benchmark/B004-002-dangling_ref", "target": "data/benchmark/B004-002-dangling_ref", "type": "dir"},
+    {"source": "data/benchmark/B004-003-dangling_ref", "target": "data/benchmark/B004-003-dangling_ref", "type": "dir"},
+    {"source": "data/benchmark/B005-001-dep_chain_break", "target": "data/benchmark/B005-001-dep_chain_break", "type": "dir"},
+    {"source": "data/benchmark/B005-002-dep_chain_break", "target": "data/benchmark/B005-002-dep_chain_break", "type": "dir"},
+    {"source": "data/benchmark/B005-003-dep_chain_break", "target": "data/benchmark/B005-003-dep_chain_break", "type": "dir"},
+    {"source": "data/benchmark/C001-clean", "target": "data/benchmark/C001-clean", "type": "dir"},
+    {"source": "data/benchmark/C002-clean", "target": "data/benchmark/C002-clean", "type": "dir"},
+    {"source": "data/benchmark/C003-clean", "target": "data/benchmark/C003-clean", "type": "dir"},
+    {"source": "data/knowledge/units.json", "target": "data/knowledge/", "type": "file"},
+    {"source": "data/real_papers/registry.json", "target": "data/real_papers/", "type": "file"}
+  ],
+  "excluded": [
+    "data/**/_private/",
+    "data/**/raw/",
+    "data/**/*.pdf"
+  ]
+}

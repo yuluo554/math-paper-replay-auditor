@@ -2,12 +2,12 @@
   {
     "sample_id": "B001-001-dimension_mismatch",
     "input_card": {
-      "paper_tex": "data\\benchmark\\B001-001-dimension_mismatch\\paper.tex",
+      "paper_tex": "data/benchmark/B001-001-dimension_mismatch/paper.tex",
       "paper_id": "synth-B001-001"
     },
     "expect": {
       "error_type": "dimension_mismatch",
-      "location": "eq:deriv",
+      "location": "eq:dim-decl",
       "is_clean": false,
       "expected_verdict": "invalid"
     },
@@ -17,12 +17,12 @@
   {
     "sample_id": "B001-002-dimension_mismatch",
     "input_card": {
-      "paper_tex": "data\\benchmark\\B001-002-dimension_mismatch\\paper.tex",
+      "paper_tex": "data/benchmark/B001-002-dimension_mismatch/paper.tex",
       "paper_id": "synth-B001-002"
     },
     "expect": {
       "error_type": "dimension_mismatch",
-      "location": "eq:deriv",
+      "location": "eq:dim-decl",
       "is_clean": false,
       "expected_verdict": "invalid"
     },
@@ -32,12 +32,12 @@
   {
     "sample_id": "B001-003-dimension_mismatch",
     "input_card": {
-      "paper_tex": "data\\benchmark\\B001-003-dimension_mismatch\\paper.tex",
+      "paper_tex": "data/benchmark/B001-003-dimension_mismatch/paper.tex",
       "paper_id": "synth-B001-003"
     },
     "expect": {
       "error_type": "dimension_mismatch",
-      "location": "eq:deriv",
+      "location": "eq:dim-decl",
       "is_clean": false,
       "expected_verdict": "invalid"
     },
@@ -47,7 +47,7 @@
   {
     "sample_id": "B002-001-illegal_derivation",
     "input_card": {
-      "paper_tex": "data\\benchmark\\B002-001-illegal_derivation\\paper.tex",
+      "paper_tex": "data/benchmark/B002-001-illegal_derivation/paper.tex",
       "paper_id": "synth-B002-001"
     },
     "expect": {
@@ -62,7 +62,7 @@
   {
     "sample_id": "B002-002-illegal_derivation",
     "input_card": {
-      "paper_tex": "data\\benchmark\\B002-002-illegal_derivation\\paper.tex",
+      "paper_tex": "data/benchmark/B002-002-illegal_derivation/paper.tex",
       "paper_id": "synth-B002-002"
     },
     "expect": {
@@ -77,7 +77,7 @@
   {
     "sample_id": "B002-003-illegal_derivation",
     "input_card": {
-      "paper_tex": "data\\benchmark\\B002-003-illegal_derivation\\paper.tex",
+      "paper_tex": "data/benchmark/B002-003-illegal_derivation/paper.tex",
       "paper_id": "synth-B002-003"
     },
     "expect": {
@@ -92,7 +92,7 @@
   {
     "sample_id": "B003-001-numeric_mismatch",
     "input_card": {
-      "paper_tex": "data\\benchmark\\B003-001-numeric_mismatch\\paper.tex",
+      "paper_tex": "data/benchmark/B003-001-numeric_mismatch/paper.tex",
       "paper_id": "synth-B003-001"
     },
     "expect": {
@@ -107,7 +107,7 @@
   {
     "sample_id": "B003-002-numeric_mismatch",
     "input_card": {
-      "paper_tex": "data\\benchmark\\B003-002-numeric_mismatch\\paper.tex",
+      "paper_tex": "data/benchmark/B003-002-numeric_mismatch/paper.tex",
       "paper_id": "synth-B003-002"
     },
     "expect": {
@@ -122,7 +122,7 @@
   {
     "sample_id": "B003-003-numeric_mismatch",
     "input_card": {
-      "paper_tex": "data\\benchmark\\B003-003-numeric_mismatch\\paper.tex",
+      "paper_tex": "data/benchmark/B003-003-numeric_mismatch/paper.tex",
       "paper_id": "synth-B003-003"
     },
     "expect": {
@@ -137,12 +137,12 @@
   {
     "sample_id": "B004-001-dangling_ref",
     "input_card": {
-      "paper_tex": "data\\benchmark\\B004-001-dangling_ref\\paper.tex",
+      "paper_tex": "data/benchmark/B004-001-dangling_ref/paper.tex",
       "paper_id": "synth-B004-001"
     },
     "expect": {
       "error_type": "dangling_ref",
-      "location": "cor:result 引用 lem:aux",
+      "location": "cor:result 引用 thm:main",
       "is_clean": false,
       "expected_verdict": "invalid"
     },
@@ -152,12 +152,12 @@
   {
     "sample_id": "B004-002-dangling_ref",
     "input_card": {
-      "paper_tex": "data\\benchmark\\B004-002-dangling_ref\\paper.tex",
+      "paper_tex": "data/benchmark/B004-002-dangling_ref/paper.tex",
       "paper_id": "synth-B004-002"
     },
     "expect": {
       "error_type": "dangling_ref",
-      "location": "cor:result 引用 lem:aux",
+      "location": "cor:result 引用 thm:main",
       "is_clean": false,
       "expected_verdict": "invalid"
     },
@@ -167,12 +167,12 @@
   {
     "sample_id": "B004-003-dangling_ref",
     "input_card": {
-      "paper_tex": "data\\benchmark\\B004-003-dangling_ref\\paper.tex",
+      "paper_tex": "data/benchmark/B004-003-dangling_ref/paper.tex",
       "paper_id": "synth-B004-003"
     },
     "expect": {
       "error_type": "dangling_ref",
-      "location": "cor:result 引用 lem:aux",
+      "location": "cor:result 引用 thm:main",
       "is_clean": false,
       "expected_verdict": "invalid"
     },
@@ -182,12 +182,12 @@
   {
     "sample_id": "B005-001-dep_chain_break",
     "input_card": {
-      "paper_tex": "data\\benchmark\\B005-001-dep_chain_break\\paper.tex",
+      "paper_tex": "data/benchmark/B005-001-dep_chain_break/paper.tex",
       "paper_id": "synth-B005-001"
     },
     "expect": {
       "error_type": "dep_chain_break",
-      "location": "thm:main → lem:aux → cor:result",
+      "location": "lem:aux → lem:base（前置引理缺失）",
       "is_clean": false,
       "expected_verdict": "invalid"
     },
@@ -197,12 +197,12 @@
   {
     "sample_id": "B005-002-dep_chain_break",
     "input_card": {
-      "paper_tex": "data\\benchmark\\B005-002-dep_chain_break\\paper.tex",
+      "paper_tex": "data/benchmark/B005-002-dep_chain_break/paper.tex",
       "paper_id": "synth-B005-002"
     },
     "expect": {
       "error_type": "dep_chain_break",
-      "location": "thm:main → lem:aux → cor:result",
+      "location": "lem:aux → lem:base（前置引理缺失）",
       "is_clean": false,
       "expected_verdict": "invalid"
     },
@@ -212,12 +212,12 @@
   {
     "sample_id": "B005-003-dep_chain_break",
     "input_card": {
-      "paper_tex": "data\\benchmark\\B005-003-dep_chain_break\\paper.tex",
+      "paper_tex": "data/benchmark/B005-003-dep_chain_break/paper.tex",
       "paper_id": "synth-B005-003"
     },
     "expect": {
       "error_type": "dep_chain_break",
-      "location": "thm:main → lem:aux → cor:result",
+      "location": "lem:aux → lem:base（前置引理缺失）",
       "is_clean": false,
       "expected_verdict": "invalid"
     },
@@ -227,7 +227,7 @@
   {
     "sample_id": "C001-clean",
     "input_card": {
-      "paper_tex": "data\\benchmark\\C001-clean\\paper.tex",
+      "paper_tex": "data/benchmark/C001-clean/paper.tex",
       "paper_id": "synth-C001"
     },
     "expect": {
@@ -242,7 +242,7 @@
   {
     "sample_id": "C002-clean",
     "input_card": {
-      "paper_tex": "data\\benchmark\\C002-clean\\paper.tex",
+      "paper_tex": "data/benchmark/C002-clean/paper.tex",
       "paper_id": "synth-C002"
     },
     "expect": {
@@ -257,7 +257,7 @@
   {
     "sample_id": "C003-clean",
     "input_card": {
-      "paper_tex": "data\\benchmark\\C003-clean\\paper.tex",
+      "paper_tex": "data/benchmark/C003-clean/paper.tex",
       "paper_id": "synth-C003"
     },
     "expect": {

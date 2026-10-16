@@ -1,5 +1,5 @@
 \documentclass{article}
-\usepackage{amsmath, amssymb, physics}
+\usepackage{amsmath, amssymb}
 
 \title{Synthetic Paper for Benchmark C003}
 \author{A. Example \\ Example University}
@@ -10,6 +10,8 @@
 
 \section{Introduction}
 This is a synthetic paper for benchmarking the math paper replay auditor.
+The main statement is Theorem~\ref{thm:main} and its consequence is
+Corollary~\ref{cor:result}.
 
 \section{Main Results}
 \begin{theorem}[Main Theorem]
@@ -31,7 +33,12 @@ f'(x) = \lim_{h \to 0} \frac{f(x+h) - f(x)}{h} = \lim_{h \to 0} \frac{e^{x+h} - 
 
 \begin{lemma}[Auxiliary Lemma]
 \label{lem:aux}
-For all $x \in \mathbb{R}$, $e^x > 0$.
+By Lemma~\ref{lem:base}, for all $x \in \mathbb{R}$, $e^x > 0$.
+\end{lemma}
+
+\begin{lemma}[Base Lemma]
+\label{lem:base}
+For all $x \in \mathbb{R}$, $e^x$ is strictly increasing.
 \end{lemma}
 
 \begin{corollary}
@@ -39,16 +46,31 @@ For all $x \in \mathbb{R}$, $e^x > 0$.
 From Theorem~\ref{thm:main} and Lemma~\ref{lem:aux}, $f'(x) > 0$ for all $x \in \mathbb{R}$.
 \end{corollary}
 
+\section{Dimensional Analysis}
+The force law is
+\begin{equation}
+\label{eq:dim}
+F = m \cdot a
+\end{equation}
+with the dimensional declaration
+\begin{equation}
+\label{eq:dim-decl}
+[F] = [M][L][T]^{-2}, \quad [m] = [M], \quad [a] = [L][T]^{-2}
+\end{equation}
+Equation~\ref{eq:dim} together with Equation~\ref{eq:dim-decl} fixes the dimensions.
+
 \section{Numerical Examples}
+The function $f(x) = e^x$ is evaluated at integer points below; see
+Equation~\ref{eq:main} and Equation~\ref{eq:deriv} for the analytic basis.
 \begin{table}[h]
 \centering
 \begin{tabular}{|c|c|}
 \hline
 $x$ & $f(x)$ \\
 \hline
-0 & 1.00000 \\
-1 & 2.71828 \\
-2 & 7.38906 \\
+0 & 1.000000 \\
+1 & 2.718282 \\
+2 & 7.389056 \\
 \hline
 \end{tabular}
 \caption{Numerical example for $f(x) = e^x$}

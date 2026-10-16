@@ -75,11 +75,25 @@ def test_k17_gate_mutation_observed_field():
 def test_k20_gate_mutation_non_deterministic():
     """K31 变异验证：生成器引入非确定性，K20 门必须变红。
 
-    变异方式：临时将 splitmix64 的 next() 方法替换为 stdlib random，
-    两次运行结果必然不同。
+    变异打在**被测行为**上：把 splitmix64 的 next() 换成 stdlib random。
+    该 RNG 被注入器真实消费（非法指数、数值偏移量都取自它），
+    故产物必然随变异而变——若仍逐字节一致，说明 RNG 是死代码、"确定性生成"
+    这个命题从未被测过（本测试的第一版正是如此：变异打进死代码，门永远变不红）。
     """
     import random as stdlib_random
     from data.benchmark.generator.deterministic_rng import SplitMix64
+
+    # 前置探针（非空转自证）：RNG 必须真的影响产物。
+    from data.benchmark.generator.paper_template import generate_paper
+    from data.benchmark.generator.error_injector import inject_illegal_derivation
+
+    base = generate_paper("PROBE", 42)
+    a1, _ = inject_illegal_derivation(base, 1001)
+    a2, _ = inject_illegal_derivation(base, 1002)
+    assert a1 != a2, (
+        "K20 前置探针失败：不同 seed 的植入产物完全相同，"
+        "说明 RNG 未参与生成——确定性命题不可证伪"
+    )
 
     # 保存原始方法
     original_next = SplitMix64.next
@@ -91,7 +105,6 @@ def test_k20_gate_mutation_non_deterministic():
 
         SplitMix64.next = mutated_next
 
-        # 运行生成器两次，比较结果
         with tempfile.TemporaryDirectory() as tmp1:
             with tempfile.TemporaryDirectory() as tmp2:
                 from data.benchmark.generator import main as gen_main
@@ -106,12 +119,18 @@ def test_k20_gate_mutation_non_deterministic():
                     (Path(tmp2) / "truth.json").read_text(encoding="utf-8")
                 )
 
-                # K20 门：两次运行必须一致
-                # 变异后，这个断言应该失败（但 pytest 会捕获）
-                # 我们用一个标志来确认变异确实产生了不同结果
-                are_equal = truth1 == truth2
+                # 还要比对样本正文：真值库不含植入值，正文才体现 RNG 消费
+                tex1 = sorted(
+                    p.read_text(encoding="utf-8")
+                    for p in Path(tmp1).rglob("paper.tex")
+                )
+                tex2 = sorted(
+                    p.read_text(encoding="utf-8")
+                    for p in Path(tmp2).rglob("paper.tex")
+                )
 
-                # 关键断言：变异后结果不应相等
+                are_equal = (truth1 == truth2) and (tex1 == tex2)
+
                 assert not are_equal, (
                     "K31 变异失败：注入非确定性后生成器仍逐字节一致，"
                     "这是假门（K20 守门未证伪）"

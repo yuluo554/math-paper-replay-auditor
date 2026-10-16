@@ -22,6 +22,11 @@ def build_parser() -> argparse.ArgumentParser:
     audit_parser.add_argument("--input", required=True, help="论文 .tex 文件或目录")
     audit_parser.add_argument("--with-llm", action="store_true", help="启用模型辅助归一化（默认关）")
     audit_parser.add_argument("--llm-endpoint", default=None, help="模型端点 URL")
+    audit_parser.add_argument(
+        "--format", default="markdown", choices=["markdown", "json"],
+        help="报告格式（markdown=人读 / json=机读）",
+    )
+    audit_parser.add_argument("--output", default=None, help="报告输出路径（缺省打到 stdout）")
 
     # bench
     bench_parser = subparsers.add_parser("bench", help="运行基准套件")
@@ -60,7 +65,12 @@ def main() -> int:
 
     if args.command == "audit":
         from auditor.pipeline import audit_paper
-        return audit_paper(input_path=args.input, with_llm=args.with_llm)
+        return audit_paper(
+            input_path=args.input,
+            with_llm=args.with_llm,
+            output_format=args.format,
+            output_path=args.output,
+        )
 
     if args.command == "fetch":
         from auditor.pipeline import fetch_arxiv

@@ -7,6 +7,7 @@ K12: 量纲代数确定性
 
 from __future__ import annotations
 
+import re
 from typing import Dict, Any, List, Optional, Tuple
 from dataclasses import dataclass, field
 from enum import Enum
@@ -229,35 +230,140 @@ def _parse_unit(unit_str: str) -> Optional[DimensionVector]:
 def _extract_dimension_from_expr(expr_str: str) -> Optional[DimensionVector]:
     """从表达式中提取量纲。
 
+    K10 纪律：只有**带数值系数的单位**才算单位标注（如 ``v = 10 m/s``）。
+    裸单字母符号（F、T、m、N…）在物理文本里通常是变量名而非单位——
+    把它们当单位会凭空造出量纲判定（F 被读成 farad、T 被读成 tesla），
+    属"猜测"，一律不认。
+
     Args:
         expr_str: 表达式字符串
 
     Returns:
         量纲向量，无法提取返回 None
     """
-    # 简化实现：查找单位标注
     import re
 
-    # 匹配单位模式
-    # 注意：需要排除数学变量（如 f, h, x 等）
-    # 单位应该是独立的，不跟在变量后面或后面跟括号
-    unit_patterns = [
-        # 匹配单位，但排除后面跟括号的情况（函数调用）
-        # 也排除前面是字母的情况（变量名的一部分）
-        r'(?<![a-zA-Z])\b(m|kg|s|A|K|mol|cd|Hz|N|J|W|Pa|C|V|Ω|F|H|Wb|T|lm|lx)\b(?!\')',
-        r'\b(m/s|kg/m\^3|N·m|J/s)\b',
-    ]
+    # 形如 "10 m/s"、"3.5 kg"、"2 N·m"：数值系数 + 单位符号
+    quantity_pattern = re.compile(
+        r"[-+]?\d+(?:\.\d+)?(?:\s*[eE][-+]?\d+)?\s*"
+        r"([A-Za-zΩ][A-Za-zΩ^0-9/·*\-]*)"
+    )
 
-    for pattern in unit_patterns:
-        matches = re.findall(pattern, expr_str, re.IGNORECASE)
-        if matches:
-            # 返回第一个匹配单位的量纲
-            for match in matches:
-                dim = _parse_unit(match.lower())
-                if dim:
-                    return dim
+    for match in quantity_pattern.finditer(expr_str):
+        unit_str = match.group(1).strip()
+        # 归一 LaTeX 幂次与乘号
+        unit_str = unit_str.replace("^", "^").replace("·", "*")
+        dim = _parse_unit(unit_str)
+        if dim is not None:
+            return dim
 
     return None
+
+
+def _parse_bracket_dimension(spec: str) -> Optional[DimensionVector]:
+    """解析方括号量纲声明，如 ``[M][L][T]^{-2}`` → DimensionVector(m=1,l=1,t=-2)。
+
+    仅接受方括号乘积形式；出现未知符号（非 7 个基本量纲）返回 None。
+    """
+    spec = spec.strip()
+    if not spec or "[" not in spec:
+        return None
+
+    base = {
+        "M": "m", "L": "l", "T": "t", "I": "i",
+        "Θ": "theta", "N": "n", "J": "j",
+    }
+    result = DimensionVector()
+
+    # 形如 [X] 或 [X]^{n} / [X]^n
+    for sym, exp_str in re.findall(r"\[([^\]]+)\](?:\s*\^\s*\{?(-?\d+)\}?)?", spec):
+        if sym not in base:
+            return None
+        try:
+            exp = int(exp_str) if exp_str else 1
+        except ValueError:
+            return None
+        field_name = base[sym]
+        setattr(result, field_name, getattr(result, field_name) + exp)
+
+    return result
+
+
+def _clean_equation_content(content: str) -> str:
+    """剥离环境标记与 label/caption，留下纯数学内容。"""
+    import re
+
+    content = re.sub(r"\\begin\{[^}]+\}", "", content)
+    content = re.sub(r"\\end\{[^}]+\}", "", content)
+    content = re.sub(r"\\label\{[^}]+\}", "", content)
+    content = re.sub(r"\\caption\{[^}]+\}", "", content)
+    return content.strip()
+
+
+def _collect_dimension_declarations(equations: List[Dict[str, Any]]) -> Dict[str, DimensionVector]:
+    """从所有方程中收集量纲声明：符号 → 声明量纲。
+
+    支持 ``[F] = [M][L][T]^{-2}`` 以及逗号/quad 分隔的多条声明。
+    """
+    decls: Dict[str, DimensionVector] = {}
+    for eq in equations:
+        raw = eq.get("content", "") if isinstance(eq, dict) else ""
+        content = _clean_equation_content(raw)
+        for sym, spec in re.findall(r"\[([A-Za-z])\]\s*=\s*([^,;]+)", content):
+            # 截断到下一个声明起点
+            spec = re.split(r"\\quad|\\;|\\,", spec)[0]
+            dim = _parse_bracket_dimension(spec)
+            if dim is not None:
+                decls[sym] = dim
+    return decls
+
+
+def _derive_dimension_from_product(
+    rhs_str: str, decls: Dict[str, DimensionVector]
+) -> Optional[DimensionVector]:
+    """由声明的量纲表推导右式（乘积形式，如 ``m \\cdot a``）的量纲。
+
+    仅处理单字母符号的乘除幂；遇到未声明符号或非代数内容返回 None。
+    """
+    import re
+
+    # 去掉 LaTeX 乘号
+    expr = re.sub(r"\\(?:cdot|times|,|;|!|quad)", " ", rhs_str)
+    expr = expr.replace("{", "").replace("}", "").replace("\\", " ")
+    expr = expr.strip()
+
+    # 只允许符号、乘除、幂、空格
+    if not re.fullmatch(r"[A-Za-z0-9\s*/^.\-()]+", expr):
+        return None
+
+    total = DimensionVector()
+    sign = 1  # +1 分子，-1 分母
+    # 逐 token 解析，支持 a/b 与 a^2
+    tokens = re.findall(r"([*/]?)\s*([A-Za-z])\s*(?:\^\s*\{?(-?\d+)\}?)?", expr)
+    if not tokens:
+        return None
+
+    consumed = 0
+    for op, sym, exp_str in tokens:
+        if op == "/":
+            sign = -1
+        elif op == "*":
+            sign = 1
+        if sym not in decls:
+            return None
+        try:
+            exp = int(exp_str) if exp_str else 1
+        except ValueError:
+            return None
+        total = total + (decls[sym] * (exp * sign))
+        consumed += 1
+
+    # 必须覆盖右式的全部字母（防"只认出一个符号就下结论"）
+    letters = re.findall(r"[A-Za-z]", expr)
+    if consumed != len(letters):
+        return None
+
+    return total
 
 
 def _check_dimension_balance(lhs_str: str, rhs_str: str) -> Tuple[Verdict, Optional[DimensionVector], Optional[DimensionVector], str]:
@@ -293,6 +399,11 @@ def _check_dimension_balance(lhs_str: str, rhs_str: str) -> Tuple[Verdict, Optio
 def check_dimensions(tree: Dict[str, Any]) -> List[ClaimResult]:
     """审计公式量纲一致性。
 
+    两级口径：
+    1. 量纲声明校验：``[F] = [M][L][T]^{-2}`` 与乘积律 ``F = m·a`` 交叉推导对账。
+       声明与推导不一致 → invalid（dimension_mismatch）。
+    2. 单位标注校验（原口径）：等式两侧带单位标注时比对；未标注 → undecidable（K10）。
+
     Args:
         tree: 论文结构树（来自解析器）
 
@@ -302,8 +413,52 @@ def check_dimensions(tree: Dict[str, Any]) -> List[ClaimResult]:
     results: List[ClaimResult] = []
     claim_counter = 0
 
-    # 从方程中提取量纲信息
     equations = tree.get("equations", [])
+
+    # ── 第一级：量纲声明与乘积律对账 ──
+    decls = _collect_dimension_declarations(equations)
+    if decls:
+        for eq in equations:
+            raw = eq.get("content", "") if isinstance(eq, dict) else ""
+            content = _clean_equation_content(raw)
+            # 跳过声明方程本身（含方括号）
+            if "[" in content:
+                continue
+            if "=" not in content:
+                continue
+            lhs_str, rhs_str = content.split("=", 1)
+            lhs_sym = lhs_str.strip()
+            if len(lhs_sym) != 1 or lhs_sym not in decls:
+                continue
+
+            derived = _derive_dimension_from_product(rhs_str, decls)
+            if derived is None:
+                continue
+
+            claim_counter += 1
+            declared = decls[lhs_sym]
+            balanced = declared == derived
+            results.append(ClaimResult(
+                claim_id=f"dim-{claim_counter:03d}",
+                claim_type="dimension",
+                verdict=Verdict.OK if balanced else Verdict.INVALID,
+                evidence=(
+                    f"量纲声明与乘积律一致: [{lhs_sym}] = {declared} "
+                    f"（由 {rhs_str.strip()} 推导得 {derived}）"
+                    "（注：量纲平衡不等于公式正确）"
+                    if balanced else
+                    f"量纲不平衡: 声明 [{lhs_sym}] = {declared}，"
+                    f"但由 {rhs_str.strip()} 推导得 {derived}"
+                ),
+                steps=[{
+                    "expr": f"[{lhs_sym}] 声明 {declared} vs 推导 {derived}",
+                    "rule": "dimension_balance",
+                    "valid": balanced,
+                }],
+                error_type="dimension_mismatch" if not balanced else None,
+            ))
+
+    # ── 第二级：单位标注校验（保留原口径，K10）──
     for eq in equations:
         claim_counter += 1
         claim_id = f"dim-{claim_counter:03d}"
@@ -318,6 +473,10 @@ def check_dimensions(tree: Dict[str, Any]) -> List[ClaimResult]:
                 rhs = parts[1]
 
                 verdict, lhs_dim, rhs_dim, evidence = _check_dimension_balance(lhs, rhs)
+
+                # 声明级已给出结论时，不再重复登记同一条方程
+                if verdict == Verdict.UNDECIDABLE and decls:
+                    continue
 
                 # K11: 量纲平衡不等于公式正确
                 if verdict == Verdict.OK:

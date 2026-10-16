@@ -6,6 +6,7 @@ K14: 幽灵 label 仅为提示
 
 from __future__ import annotations
 
+import re
 from typing import Dict, Any, List, Optional, Set, Tuple
 from dataclasses import dataclass, field
 from collections import defaultdict, deque
@@ -135,10 +136,46 @@ def _build_dependency_graph(tree: Dict[str, Any]) -> DependencyGraph:
     return graph
 
 
+# 依赖型引用所在环境：引理/定理/命题/证明引用的是**前置结果**，
+# 其缺失属于依赖断链；其余（推论、正文）引用他人成果，缺失属于悬空引用。
+DEPENDENCY_ENVS = {"lemma", "theorem", "proposition", "proof"}
+
+
+def _classify_missing_refs(tree: Dict[str, Any], graph: DependencyGraph) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+    """把"引用了不存在的 label"按引用者环境分两类。
+
+    Returns:
+        (dangling_refs, dep_chain_breaks)
+    """
+    existing_labels = {node.label for node in graph.nodes}
+    dangling: List[Dict[str, Any]] = []
+    broken: List[Dict[str, Any]] = []
+
+    for ref in tree.get("refs", []):
+        ref_label = ref.get("ref", "")
+        if not ref_label or ref_label in existing_labels:
+            continue
+        env = ref.get("env")
+        item = {
+            "ref": ref_label,
+            "env": env,
+            "location": env or "unknown",
+            "message": f"引用了不存在的 label: {ref_label}",
+        }
+        if env in DEPENDENCY_ENVS:
+            item["message"] = f"依赖链断裂：{env} 依赖的 {ref_label} 不存在"
+            broken.append(item)
+        else:
+            dangling.append(item)
+
+    return dangling, broken
+
+
 def _find_dangling_refs(graph: DependencyGraph, tree: Dict[str, Any]) -> List[Dict[str, Any]]:
     """查找悬空引用。
 
-    悬空引用：ref 指向的 label 不存在。
+    悬空引用：ref 指向的 label 不存在，且引用者不是"依赖前置结果"的结构
+    （推论/正文引用他人成果）。
 
     Args:
         graph: 依赖图
@@ -147,22 +184,8 @@ def _find_dangling_refs(graph: DependencyGraph, tree: Dict[str, Any]) -> List[Di
     Returns:
         悬空引用列表
     """
-    dangling_refs = []
-
-    # 收集所有存在的 label
-    existing_labels = {node.label for node in graph.nodes}
-
-    # 检查每个 ref
-    for ref in tree.get("refs", []):
-        ref_label = ref.get("ref", "")
-        if ref_label and ref_label not in existing_labels:
-            dangling_refs.append({
-                "ref": ref_label,
-                "location": ref.get("section", "unknown"),
-                "message": f"引用了不存在的 label: {ref_label}"
-            })
-
-    return dangling_refs
+    dangling, _ = _classify_missing_refs(tree, graph)
+    return dangling
 
 
 def _find_ghost_labels(graph: DependencyGraph, tree: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -200,32 +223,22 @@ def _find_ghost_labels(graph: DependencyGraph, tree: Dict[str, Any]) -> List[Dic
     return ghost_labels
 
 
-def _find_broken_chains(graph: DependencyGraph) -> List[Dict[str, Any]]:
+def _find_broken_chains(graph: DependencyGraph, tree: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
     """查找依赖断链。
 
-    依赖断链：A → B → C 中 B 不存在。
+    依赖断链：结构体（引理/定理/命题/证明）依赖的前置结果 label 不存在。
 
     Args:
         graph: 依赖图
+        tree: 论文结构树（提供 ref 的所在环境）
 
     Returns:
         依赖断链列表
     """
-    broken_chains = []
-
-    # 检查每个引用链
-    for edge in graph.edges:
-        from_node = graph.get_node_by_id(edge.from_id)
-        to_node = graph.get_node_by_id(edge.to_id)
-
-        if from_node and to_node:
-            # 检查 to_node 是否也被其他节点引用
-            incoming_edges = graph.get_edges_to(to_node.id)
-            if len(incoming_edges) == 1 and incoming_edges[0].from_id != from_node.id:
-                # to_node 只有一条入边，且不是来自当前节点
-                pass
-
-    return broken_chains
+    if tree is None:
+        return []
+    _, broken = _classify_missing_refs(tree, graph)
+    return broken
 
 
 def _check_topology(graph: Dict[str, Any]) -> Dict[str, Any]:
@@ -337,7 +350,7 @@ def check_dependency_graph(tree: Dict[str, Any]) -> List[ClaimResult]:
         ))
 
     # 查找依赖断链
-    broken_chains = _find_broken_chains(graph)
+    broken_chains = _find_broken_chains(graph, tree)
     claim_counter += 1
     if broken_chains:
         results.append(ClaimResult(

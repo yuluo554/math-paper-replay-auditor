@@ -26,15 +26,29 @@ py -3.12 -m venv .venv
 python -m pip install -U pip setuptools wheel
 python -m pip install -e ".[dev,core]"
 
-# 4. 自检
+# 4. 自检（内嵌数据定位 + 四引擎全链路 + 基准达标）
 python -m auditor selftest
 
-# 5. 运行基准
+# 5. 运行基准（18 个合成样本：检出率 / 误报率 / 逐类覆盖）
 python -m auditor bench
 
-# 6. 审计一篇论文
-python -m auditor audit --input data/benchmark/samples/C001-clean/paper.tex
+# 6. 审计一篇论文（人读报告；加 --format json 出机读报告）
+python -m auditor audit --input data/benchmark/C001-clean/paper.tex
+
+# 7. 只跑一类错误
+python -m auditor bench --only numeric_mismatch
 ```
+
+## 退出码语义
+
+| 退出码 | 含义 |
+|---|---|
+| 0 | 无确证问题 / 基准全绿（`bench`） |
+| 1 | 检出确证问题 / 基准未达标 |
+| 2 | 用法错误（缺文件、未知命令、参数错误） |
+| 3 | 缺依赖（可选组件未安装，如 GUI 的 PySide6） |
+
+> 非 0 退出码不等于"跑挂了"：`audit` 对含问题的论文返回 1 是**既定语义**。
 
 ## 项目结构
 

@@ -121,6 +121,68 @@ def _compare_values(paper_value: float, computed_value: float, category: str = "
         return Verdict.INVALID, f"偏差 {deviation:.2e} 超出容差 {tolerance:.0e}", deviation
 
 
+def _extract_formula(text: str) -> Optional[str]:
+    """从 caption/正文中提取函数公式，如 ``$f(x) = e^x$`` → ``e^x``。"""
+    import re
+
+    for m in re.finditer(r"\$([^$]+)\$", text):
+        body = m.group(1)
+        if "=" not in body:
+            continue
+        lhs, rhs = body.split("=", 1)
+        if re.match(r"^\s*[a-zA-Z]\s*\(\s*[a-zA-Z]\s*\)\s*$", lhs):
+            return rhs.strip()
+    return None
+
+
+def _extract_table_rows(content: str) -> List[Tuple[float, float]]:
+    """从 tabular 内容提取 (x, y) 数值行。"""
+    import re
+
+    rows: List[Tuple[float, float]] = []
+    for line in content.splitlines():
+        # 形如 "1 & 2.718282 \\"
+        m = re.match(r"\s*([-+]?\d+(?:\.\d+)?)\s*&\s*([-+]?\d+(?:\.\d+)?)\s*\\\\?\s*$", line)
+        if m:
+            rows.append((float(m.group(1)), float(m.group(2))))
+    return rows
+
+
+def _evaluate_formula_mpmath(formula: str, x_value: float) -> Optional[float]:
+    """用 mpmath 独立复算 f(x)（数值路径，不借道 SymPy）。
+
+    支持形如 ``e^x``、``e^{x}``、``exp(x)`` 的单变量表达式。
+    """
+    import re
+
+    try:
+        import mpmath
+
+        mpmath.mp.dps = 50
+
+        expr = formula.strip().replace("{", "(").replace("}", ")")
+        expr = re.sub(r"\\(?:cdot|times)", "*", expr)
+        expr = re.sub(r"\s+", "", expr)
+
+        # e^{...} / e^x → exp(...)
+        expr = re.sub(r"e\^\(([^()]+)\)", r"exp(\1)", expr)
+        expr = re.sub(r"e\^([A-Za-z0-9])", r"exp(\1)", expr)
+        expr = expr.replace("exp(", "mpmath.exp(")
+        # 独立 e 底数
+        expr = re.sub(r"(?<![A-Za-z_.])e(?![A-Za-z_(])", "mpmath.e", expr)
+        # 变量 x
+        expr = re.sub(r"(?<![A-Za-z_.])x(?![A-Za-z_])", "mpmath.mpf('%s')" % x_value, expr)
+
+        # 只允许 mpmath 调用、数字与算术
+        if not re.fullmatch(r"[A-Za-z0-9_.+\-*/(),_']+", expr):
+            return None
+
+        result = eval(expr, {"__builtins__": {}}, {"mpmath": mpmath})  # noqa: S307
+        return float(result)
+    except Exception:
+        return None
+
+
 def _verify_table_value(paper_value: float, computed_value: float) -> Tuple[Verdict, str, float]:
     """验证表格数值。"""
     return _compare_values(paper_value, computed_value, "table_value")
@@ -156,10 +218,31 @@ def _verify_series_sum(paper_value: float, computed_value: float) -> Tuple[Verdi
     return _compare_values(paper_value, computed_value, "series")
 
 
+def _dedup_nested_tables(tables: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """剔除嵌套在 table 环境内的 tabular 条目（同一张表只审计一次）。
+
+    解析器按契约同时登记 table 与 tabular 两种环境（K1 覆盖度口径），
+    但审计面只应认外层 table（它带 caption，公式信息更全）。
+    """
+    table_contents = [
+        t.get("content", "") for t in tables if t.get("type") == "table"
+    ]
+    out: List[Dict[str, Any]] = []
+    for t in tables:
+        if t.get("type") == "tabular":
+            content = t.get("content", "")
+            if any(content and content in tc for tc in table_contents):
+                continue
+        out.append(t)
+    return out
+
+
 def recompute_numerical(tree: Dict[str, Any]) -> List[ClaimResult]:
     """对论文数值断言做独立复算。
 
     数值路径使用 mpmath 实现，与符号路径（SymPy）不共享核心函数。
+    复算 = 从表格 caption 提取公式 f(x)，对每个 x 用 mpmath 独立求值，
+    再与表中报告值按容差比对——**绝不拿报告值自己比自己**。
 
     Args:
         tree: 论文结构树（来自解析器）
@@ -169,75 +252,67 @@ def recompute_numerical(tree: Dict[str, Any]) -> List[ClaimResult]:
     """
     results: List[ClaimResult] = []
     claim_counter = 0
+    note = tolerance_note("table_value")
 
-    # 从表格中提取数值
-    tables = tree.get("tables", [])
-    for table in tables:
+    def _add_undecidable(tbl_idx: int, reason: str, n_rows: int) -> None:
+        nonlocal claim_counter
         claim_counter += 1
-        claim_id = f"num-{claim_counter:03d}"
+        results.append(ClaimResult(
+            claim_id=f"num-{claim_counter:03d}",
+            claim_type="table_value",
+            verdict=Verdict.UNDECIDABLE,
+            evidence=f"{reason}（{note}）",
+            steps=[{"expr": f"表格行数: {n_rows}", "rule": "recompute_skipped", "valid": False}],
+        ))
 
-        content = table.get("content", "")
+    tables = _dedup_nested_tables(tree.get("tables", []))
+    for tbl_idx, table in enumerate(tables):
+        content = table.get("content", "") if isinstance(table, dict) else ""
+        rows = _extract_table_rows(content)
 
-        # 尝试提取表格中的数值
-        # 简化实现：假设表格内容包含数值
-        import re
-        numbers = re.findall(r'[-+]?\d*\.\d+(?:[eE][-+]?\d+)?', content)
+        if not rows:
+            # 数值行不可提取（表头非数值或格式特殊）→ 无法独立复算，如实记 undecidable
+            _add_undecidable(tbl_idx, "表格未给出可提取的数值行，无法独立复算", 0)
+            continue
 
-        if numbers:
-            # 验证第一个数值
-            paper_value = float(numbers[0])
+        formula = _extract_formula(content)
+        if formula is None:
+            # 无公式可依 → 无法独立复算（不虚高判 ok）
+            _add_undecidable(tbl_idx, "表格未给出可复算公式，无法独立复算", len(rows))
+            continue
 
-            # 使用数值路径重新计算
-            # 这里需要更复杂的表达式解析
-            # 简化实现：假设数值可以直接验证
-            computed_value = paper_value  # 实际应用中需要从表达式计算
+        for x_value, paper_value in rows:
+            claim_counter += 1
+            claim_id = f"num-{claim_counter:03d}"
 
-            verdict, evidence, deviation = _verify_table_value(paper_value, computed_value)
+            computed = _evaluate_formula_mpmath(formula, x_value)
+            if computed is None:
+                results.append(ClaimResult(
+                    claim_id=claim_id,
+                    claim_type="table_value",
+                    verdict=Verdict.UNDECIDABLE,
+                    evidence=f"公式 {formula} 无法用数值路径求值（{note}）",
+                    steps=[{"expr": f"f({x_value})", "rule": "recompute_failed", "valid": False}],
+                ))
+                continue
 
+            verdict, evidence, deviation = _verify_table_value(paper_value, computed)
             results.append(ClaimResult(
                 claim_id=claim_id,
                 claim_type="table_value",
                 verdict=verdict,
-                evidence=evidence + f"（{tolerance_note('table_value')}）",
+                evidence=(
+                    f"f({x_value:g}) 报告 {paper_value}，独立复算 {computed:.6f}，"
+                    + evidence
+                    + f"（{note}）"
+                ),
                 steps=[{
-                    "expr": f"表格数值: {paper_value}",
+                    "expr": f"f({x_value:g}): 报告 {paper_value} vs 复算 {computed:.6f}",
                     "rule": "numerical_recompute",
                     "valid": verdict == Verdict.OK,
-                    "deviation": deviation
-                }]
-            ))
-
-    # 从方程中提取数值断言
-    equations = tree.get("equations", [])
-    for eq in equations:
-        claim_counter += 1
-        claim_id = f"num-{claim_counter:03d}"
-
-        content = eq.get("content", "")
-
-        # 检查是否包含数值
-        import re
-        numbers = re.findall(r'[-+]?\d*\.\d+(?:[eE][-+]?\d+)?', content)
-
-        if numbers:
-            paper_value = float(numbers[0])
-
-            # 使用数值路径验证
-            computed_value = paper_value  # 简化实现
-
-            verdict, evidence, deviation = _compare_values(paper_value, computed_value)
-
-            results.append(ClaimResult(
-                claim_id=claim_id,
-                claim_type="table_value",
-                verdict=verdict,
-                evidence=evidence + f"（{tolerance_note('default')}）",
-                steps=[{
-                    "expr": f"方程数值: {paper_value}",
-                    "rule": "numerical_recompute",
-                    "valid": verdict == Verdict.OK,
-                    "deviation": deviation
-                }]
+                    "deviation": deviation,
+                }],
+                error_type="numeric_mismatch" if verdict == Verdict.INVALID else None,
             ))
 
     # 如果没有数值断言，添加 undecidable 结果
@@ -246,7 +321,7 @@ def recompute_numerical(tree: Dict[str, Any]) -> List[ClaimResult]:
             claim_id="none-001",
             claim_type="table_value",
             verdict=Verdict.UNDECIDABLE,
-            evidence="论文中无可数值化断言",
+            evidence=f"论文中无可数值化断言（{note}）",
             steps=[]
         ))
 

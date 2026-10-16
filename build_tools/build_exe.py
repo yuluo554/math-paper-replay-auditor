@@ -19,6 +19,12 @@ SRC_DIR = REPO_ROOT / "src"
 DIST_DIR = REPO_ROOT / "dist"
 BUILD_DIR = REPO_ROOT / "build"
 
+# 允许以 `python build_tools/build_exe.py` 直接运行（脚本态下仓库根不在 sys.path）
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from build_tools.build_datas import build_datas  # noqa: E402
+
 # CLI 隐藏导入（核心引擎）
 CLI_HIDDENIMPORTS = [
     "auditor.core.parser",
@@ -31,6 +37,16 @@ CLI_HIDDENIMPORTS = [
     "auditor.benchmark.runner",
     "auditor.benchmark.metrics",
     "auditor.pipeline",
+    # sympy.parsing.latex 需要 antlr4 运行时；缺失时 parse_latex 会静默返回 None，
+    # 使重放链退化为全 invalid（冻结态与源码态行为分叉），故必须显式收进包。
+    # 注意：_parse_latex_antlr 是**动态 import**（import_module），
+    # PyInstaller 静态分析看不到，必须逐个点名，否则冻结态静默降级。
+    "antlr4",
+    "sympy.parsing.latex",
+    "sympy.parsing.latex._parse_latex_antlr",
+    "sympy.parsing.latex._antlr",
+    "sympy.parsing.latex._antlr.latexlexer",
+    "sympy.parsing.latex._antlr.latexparser",
 ]
 
 # CLI 排除项（Qt 栈）
@@ -59,6 +75,13 @@ GUI_HIDDENIMPORTS = [
     "auditor.pipeline",
     "auditor.gui.main_window",
     "auditor.gui.pipelines",
+    # 同 CLI：antlr4 是 parse_latex 的运行时前提，缺则冻结态静默降级。
+    "antlr4",
+    "sympy.parsing.latex",
+    "sympy.parsing.latex._parse_latex_antlr",
+    "sympy.parsing.latex._antlr",
+    "sympy.parsing.latex._antlr.latexlexer",
+    "sympy.parsing.latex._antlr.latexparser",
 ]
 
 # GUI 排除项（CLI 不需要的）
@@ -72,23 +95,38 @@ def _ensure_utf8_stdio() -> None:
             stream.reconfigure(encoding="utf-8")
 
 
+def _python_cmd() -> List[str]:
+    """返回本机可用的 Python 解释器命令（argv 形式）。
+
+    本机 Windows 上 `python` 可能是商店占位符，故优先 py 启动器；
+    解析失败则回落到当前解释器 sys.executable。
+    """
+    import shutil
+    if shutil.which("py"):
+        return ["py", "-3.12"]
+    return [sys.executable]
+
+
+def _datas_args() -> List[str]:
+    """由白名单单一事实源生成 PyInstaller --add-data 参数。"""
+    args: List[str] = []
+    for src, dest in build_datas():
+        args.extend(["--add-data", f"{src}{os.pathsep}{dest}"])
+    return args
+
+
 def build_cli_exe(python_path: str = None) -> int:
     """构建 CLI exe。
 
     Args:
-        python_path: Python 解释器路径（默认用 py -3.12）
+        python_path: 已废弃（保留形参兼容旧调用）；解释器由 _python_cmd() 决定
 
     Returns:
         退出码
     """
     _ensure_utf8_stdio()
 
-    if python_path is None:
-        python_path = "py -3.12"
-
-    # 构建 PyInstaller 命令
-    cmd = [
-        python_path,
+    cmd = _python_cmd() + [
         "-m", "PyInstaller",
         "--name", "auditor-cli",
         "--console",
@@ -105,19 +143,16 @@ def build_cli_exe(python_path: str = None) -> int:
     for ex in CLI_EXCLUDES:
         cmd.extend(["--exclude-module", ex])
 
-    # 添加数据文件
-    from packaging.build_datas import build_datas
-    datas = build_datas()
-    for src, dest in datas:
-        cmd.extend(["--add-data", f"{src}{os.pathsep}{dest}"])
+    # 添加数据文件（白名单单一事实源）
+    cmd.extend(_datas_args())
 
     cmd.append(str(SRC_DIR / "auditor" / "cli.py"))
 
-    print(f"=== 构建 CLI exe ===")
+    print("=== 构建 CLI exe ===")
     print(f"命令: {' '.join(cmd)}")
 
     import subprocess
-    result = subprocess.run(cmd, cwd=REPO_ROOT)
+    result = subprocess.run(cmd, cwd=str(REPO_ROOT))
     return result.returncode
 
 
@@ -125,19 +160,14 @@ def build_gui_exe(python_path: str = None) -> int:
     """构建 GUI exe。
 
     Args:
-        python_path: Python 解释器路径（默认用 py -3.12）
+        python_path: 已废弃（保留形参兼容旧调用）；解释器由 _python_cmd() 决定
 
     Returns:
         退出码
     """
     _ensure_utf8_stdio()
 
-    if python_path is None:
-        python_path = "py -3.12"
-
-    # 构建 PyInstaller 命令
-    cmd = [
-        python_path,
+    cmd = _python_cmd() + [
         "-m", "PyInstaller",
         "--name", "auditor",
         "--windowed",
@@ -154,19 +184,16 @@ def build_gui_exe(python_path: str = None) -> int:
     for ex in GUI_EXCLUDES:
         cmd.extend(["--exclude-module", ex])
 
-    # 添加数据文件
-    from packaging.build_datas import build_datas
-    datas = build_datas()
-    for src, dest in datas:
-        cmd.extend(["--add-data", f"{src}{os.pathsep}{dest}"])
+    # 添加数据文件（白名单单一事实源）
+    cmd.extend(_datas_args())
 
     cmd.append(str(SRC_DIR / "auditor" / "gui" / "main_window.py"))
 
-    print(f"=== 构建 GUI exe ===")
+    print("=== 构建 GUI exe ===")
     print(f"命令: {' '.join(cmd)}")
 
     import subprocess
-    result = subprocess.run(cmd, cwd=REPO_ROOT)
+    result = subprocess.run(cmd, cwd=str(REPO_ROOT))
     return result.returncode
 
 

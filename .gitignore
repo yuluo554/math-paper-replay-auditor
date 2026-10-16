@@ -71,3 +71,6 @@ logs/
 *.log
 tmp/
 *.tmp
+
+# 干净环境验证用 venv（不入仓）
+.cleanenv/

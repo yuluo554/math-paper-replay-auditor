@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import List, Tuple
 
 
-def build_datas(whitelist_path: str = "packaging/DATAS_WHITELIST.json") -> List[Tuple[str, str]]:
+def build_datas(whitelist_path: str = "build_tools/DATAS_WHITELIST.json") -> List[Tuple[str, str]]:
     """构建 PyInstaller datas 列表。"""
     wl_path = Path(whitelist_path)
     if not wl_path.exists():
@@ -47,7 +47,7 @@ def build_datas(whitelist_path: str = "packaging/DATAS_WHITELIST.json") -> List[
     return datas
 
 
-def verify_dist(dist_path: str, whitelist_path: str = "packaging/DATAS_WHITELIST.json") -> Tuple[bool, List[str]]:
+def verify_dist(dist_path: str, whitelist_path: str = "build_tools/DATAS_WHITELIST.json") -> Tuple[bool, List[str]]:
     """K38: 入包集合 == 白名单（双向对账）。
 
     Returns:

@@ -8,6 +8,7 @@ K22: 探活打在消费处
 from __future__ import annotations
 
 import json
+import os
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -37,16 +38,34 @@ class BenchmarkResult:
     exit_code: int = 0
 
 
+def _get_root() -> Path:
+    """获取仓库相对路径的挂载根（冻结态/源码态一致语义）。
+
+    冻结态：数据解包到 sys._MEIPASS，白名单 target 镜像仓库相对路径，
+            故 <root>/data/... 在两种模式下结构完全一致。
+    源码态：<root> = 当前工作目录（须为仓库根，见 README 命令）。
+    """
+    if getattr(sys, "frozen", False):
+        return Path(sys._MEIPASS)
+    return Path(".")
+
+
+def _resolve_repo_path(rel_path: str) -> Path:
+    """把仓库相对路径（如 data/benchmark/truth.json）解析为可打开路径。"""
+    rel = rel_path.replace("\\", "/").lstrip("/")
+    return _get_root() / Path(*rel.split("/"))
+
+
 def load_truth(benchmark_dir: str = "data/benchmark") -> List[Dict[str, Any]]:
     """加载真值库。
 
     Args:
-        benchmark_dir: 基准数据目录
+        benchmark_dir: 基准数据目录（仓库相对路径）
 
     Returns:
         真值库条目列表
     """
-    truth_path = Path(benchmark_dir) / "truth.json"
+    truth_path = _resolve_repo_path(f"{benchmark_dir}/truth.json")
     if not truth_path.exists():
         raise FileNotFoundError(f"真值库不存在: {truth_path}")
 
@@ -58,12 +77,12 @@ def load_manifest(benchmark_dir: str = "data/benchmark") -> Dict[str, Any]:
     """加载覆盖度口径。
 
     Args:
-        benchmark_dir: 基准数据目录
+        benchmark_dir: 基准数据目录（仓库相对路径）
 
     Returns:
         manifest 字典
     """
-    manifest_path = Path(benchmark_dir) / "manifest.json"
+    manifest_path = _resolve_repo_path(f"{benchmark_dir}/manifest.json")
     if not manifest_path.exists():
         raise FileNotFoundError(f"manifest.json 不存在: {manifest_path}")
 
@@ -118,8 +137,12 @@ def _audit_sample(sample_id: str, paper_tex: str) -> List[Dict[str, Any]]:
     from auditor.core.dimensional import check_dimensions
     from auditor.core.graph import check_dependency_graph
 
+    # 冻结态下，仓库相对路径需挂到解包根（sys._MEIPASS）之下。
+    # 白名单 target 镜像仓库相对路径，故此处只做"根替换"，不做结构翻译。
+    paper_path = _resolve_repo_path(paper_tex)
+
     # 解析论文
-    tree = parse(paper_tex)
+    tree = parse(str(paper_path))
 
     # 将 Pydantic 模型转为字典
     tree_dict = tree.model_dump() if hasattr(tree, 'model_dump') else tree.__dict__
@@ -127,49 +150,29 @@ def _audit_sample(sample_id: str, paper_tex: str) -> List[Dict[str, Any]]:
     # 运行所有引擎
     all_claims = []
 
-    # 符号重放
-    replay_claims = replay(tree_dict)
-    all_claims.extend([
-        {
+    def _to_dict(c, engine_name):
+        return {
             "claim_id": c.claim_id,
             "verdict": c.verdict.value if hasattr(c.verdict, 'value') else str(c.verdict),
-            "engine": "replay",
+            "engine": engine_name,
+            "error_type": getattr(c, "error_type", None),
         }
-        for c in replay_claims
-    ])
+
+    # 符号重放
+    replay_claims = replay(tree_dict)
+    all_claims.extend([_to_dict(c, "replay") for c in replay_claims])
 
     # 数值复算
     numerical_claims = recompute_numerical(tree_dict)
-    all_claims.extend([
-        {
-            "claim_id": c.claim_id,
-            "verdict": c.verdict.value if hasattr(c.verdict, 'value') else str(c.verdict),
-            "engine": "numerical",
-        }
-        for c in numerical_claims
-    ])
+    all_claims.extend([_to_dict(c, "numerical") for c in numerical_claims])
 
     # 量纲审计
     dim_claims = check_dimensions(tree_dict)
-    all_claims.extend([
-        {
-            "claim_id": c.claim_id,
-            "verdict": c.verdict.value if hasattr(c.verdict, 'value') else str(c.verdict),
-            "engine": "dimensional",
-        }
-        for c in dim_claims
-    ])
+    all_claims.extend([_to_dict(c, "dimensional") for c in dim_claims])
 
     # 依赖图
     graph_claims = check_dependency_graph(tree_dict)
-    all_claims.extend([
-        {
-            "claim_id": c.claim_id,
-            "verdict": c.verdict.value if hasattr(c.verdict, 'value') else str(c.verdict),
-            "engine": "graph",
-        }
-        for c in graph_claims
-    ])
+    all_claims.extend([_to_dict(c, "graph") for c in graph_claims])
 
     return all_claims
 

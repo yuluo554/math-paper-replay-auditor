@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import ast
+import re
 from pathlib import Path
 
 import pytest
@@ -28,6 +29,29 @@ def _parse_pyproject_extras() -> dict:
     with open(PYPROJECT_PATH, "rb") as f:
         data = tomllib.load(f)
     return data.get("project", {}).get("optional-dependencies", {})
+
+
+def _parse_runtime_deps() -> set:
+    """解析 pyproject 的运行时依赖（project.dependencies）。
+
+    README 的安装行是 `pip install -e ".[dev,core]"`——运行时依赖随 base
+    一起装上，故测试 import 运行时依赖不算缺口（第三面：测试面=安装面）。
+    """
+    try:
+        import tomllib
+    except ImportError:
+        import tomli as tomllib
+
+    with open(PYPROJECT_PATH, "rb") as f:
+        data = tomllib.load(f)
+
+    names = set()
+    for dep in data.get("project", {}).get("dependencies", []):
+        # 去掉版本约束，取分发名
+        name = re.split(r"[<>=!~\[\s]", dep.strip())[0]
+        if name:
+            names.add(name)
+    return names
 
 
 def _extract_imports_from_file(file_path: Path) -> set:
@@ -67,20 +91,31 @@ def _get_stdlib_names() -> set:
         "numbers", "operator", "itertools", "heapq", "bisect",
         "queue", "select", "signal", "time", "calendar", "os.path",
         "__future__",
+        # M6 补入（新增测试引入的标准库须同步进冻结名单；
+        # 这是"判定词表"维护，不是放宽断言）
+        "zipfile", "textwrap", "difflib", "argparse", "platform",
+        "getpass", "uuid", "base64", "binascii", "struct", "array",
+        "unicodedata", "locale", "codecs", "dis", "tokenize", "ast",
+        "sysconfig", "venv", "shlex", "configparser", "sqlite3",
+        "email", "mimetypes", "secrets", "hmac", "zlib", "gzip",
+        "tarfile", "shutil", "filecmp", "fnmatch", "glob",
     }
     return stdlib
 
 
 def test_all_test_imports_in_dev_extra():
-    """K34: tests/ 目录所有 import 的第三方库都在 dev extra 中。"""
+    """K34: tests/ 目录所有 import 的第三方库都在 dev extra 或运行时依赖中。"""
     extras = _parse_pyproject_extras()
     dev_extra = extras.get("dev", [])
     dev_names = {d.split(">=")[0].split("<")[0].strip() for d in dev_extra}
+    # README 装 .[dev,core]；project.dependencies（base）也随之装上
+    runtime_names = _parse_runtime_deps()
+    installed_names = dev_names | runtime_names
 
     stdlib = _get_stdlib_names()
 
     # 本包（auditor）和测试包（tests）不进 dev extra
-    local_packages = {"auditor", "tests", "data", "packaging", "tools"}
+    local_packages = {"auditor", "tests", "data", "build_tools", "tools"}
 
     # 收集 tests/ 目录所有 import
     test_imports = set()
@@ -94,9 +129,12 @@ def test_all_test_imports_in_dev_extra():
     # 过滤掉 tomli/tomllib（这是测试中的条件导入）
     third_party = third_party - {"tomli", "tomllib"}
 
-    # 检查每个第三方库都在 dev extra 中
-    missing = third_party - dev_names
-    assert not missing, f"以下第三方库在 tests/ 中被 import 但不在 dev extra 中: {missing}"
+    # 检查每个第三方库都在 dev extra 或运行时依赖中
+    missing = third_party - installed_names
+    assert not missing, (
+        f"以下第三方库在 tests/ 中被 import 但既不在 dev extra "
+        f"也不在运行时依赖中: {missing}"
+    )
 
 
 def test_dev_extra_contains_pytest():

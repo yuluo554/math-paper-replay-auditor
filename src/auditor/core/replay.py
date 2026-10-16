@@ -149,6 +149,14 @@ def _parse_latex_expr(latex_str: str, function_defs: Optional[FunctionDefs] = No
     try:
         from sympy.parsing.latex import parse_latex
         result = parse_latex(latex_str)
+        import os as _o
+        if _o.environ.get("AUDITOR_DEBUG"):
+            import sys as _s
+            print(f"RDBG PL({latex_str!r}) -> {result!r}", file=_s.stderr)
+        # 冻结态下 antlr4 缺失时 parse_latex 会静默返回 None（不抛异常），
+        # 必须视为解析失败并落回 sympify 路径，否则整条重放链退化为全 invalid。
+        if result is None:
+            raise ValueError("parse_latex 返回 None（antlr4 不可用）")
         # 后处理：递归将 e**x 转换为 exp(x)
         def convert_e_power(expr):
             if isinstance(expr, Pow):
@@ -392,6 +400,36 @@ def _substitute_function_defs(expr: Any, function_defs: FunctionDefs) -> Any:
     return expr
 
 
+def _is_definition(lhs: Any, rhs: Any) -> bool:
+    """判断等式是否为"定义式"（而非可验证的推导步）。
+
+    定义式的充要条件（两条都要满足）：
+    1. 两侧自由符号交集为空（不是在同一变量上做等价变换）；
+    2. **右侧是真正的复合式**——至少含一个运算符/函数调用，
+       或含 ≥2 个自由符号。形如 ``F = m \\cdot a``（右侧有乘号、2 个符号）成立。
+
+    反例（**不是**定义式，必须走正常判定）：
+    - ``\\undefinedmacroA{ = \\undefinedmacroB{``：两侧各是一个孤立符号，
+      其实是解析残渣，把它当"定义"会伪造成 ok（假阴性）；
+    - ``f'(x) = f(x)``：两侧共享 x，属可验证的推导步。
+
+    判别口诀：定义式要"引入一个新量由别的东西构成"，
+    单个孤立符号对单个孤立符号不是构成关系。
+    """
+    try:
+        lhs_free = getattr(lhs, "free_symbols", set())
+        rhs_free = getattr(rhs, "free_symbols", set())
+        if not lhs_free or not rhs_free:
+            return False
+        if lhs_free & rhs_free:
+            return False
+        # 右侧必须是复合式：有运算符/函数调用，或至少两个自由符号
+        rhs_is_composite = len(rhs_free) >= 2 or bool(getattr(rhs, "args", ()))
+        return rhs_is_composite
+    except Exception:
+        return False
+
+
 def _verify_equality_chain(
     equations: List[Tuple[str, str]],
     function_defs: Optional[FunctionDefs] = None
@@ -408,12 +446,15 @@ def _verify_equality_chain(
     steps = []
     all_valid = True
     any_invalid = False
+    any_undecidable = False
 
     for i, (lhs_str, rhs_str) in enumerate(equations):
         lhs = _parse_latex_expr(lhs_str, function_defs)
         rhs = _parse_latex_expr(rhs_str, function_defs)
 
         if lhs is None or rhs is None:
+            # K4: 解析失败属"引擎能力外"，记 undecidable——不得虚高判 invalid
+            # （把"没看懂"报成"有错误"会误导作者改对为错）
             step = {
                 "expr": f"{lhs_str} = {rhs_str}",
                 "rule": "parse_failed",
@@ -421,7 +462,7 @@ def _verify_equality_chain(
                 "counterexample": f"无法解析表达式: {lhs_str if lhs is None else rhs_str}"
             }
             steps.append(step)
-            any_invalid = True
+            any_undecidable = True
             continue
 
         # 特殊处理：导数定义
@@ -433,6 +474,15 @@ def _verify_equality_chain(
                 "valid": True
             }
             steps.append(step)
+            continue
+
+        # 定义式（两侧无共享自由符号，如 F = m·a）：无从证伪 → undecidable
+        if _is_definition(lhs, rhs):
+            steps.append({
+                "expr": f"{lhs_str} = {rhs_str}",
+                "rule": "definition",
+                "valid": True,
+            })
             continue
 
         # 代入函数定义
@@ -453,9 +503,15 @@ def _verify_equality_chain(
 
     if any_invalid:
         return Verdict.INVALID, steps, "推导链中存在不等价步骤"
+    if any_undecidable:
+        return Verdict.UNDECIDABLE, steps, "推导链中存在无法解析的步骤（引擎能力外）"
     if not steps:
         return Verdict.UNDECIDABLE, steps, "无可验证的等式"
     return Verdict.OK, steps, "所有等式步骤验证通过"
+
+
+# 推导链不等价时归属的错误类型（与 benchmark ERROR_TYPES 白名单同词面）
+_ILLEGAL_DERIVATION = "illegal_derivation"
 
 
 def _is_derivative_definition(lhs_str: str, rhs_str: str, function_defs: Optional[FunctionDefs] = None) -> bool:
@@ -757,6 +813,11 @@ def replay(tree: Any) -> List[ClaimResult]:
 
         # 尝试解析等式链
         if "=" in latex_content:
+            # 量纲声明式（含方括号量纲记法）不是符号推导断言，
+            # 不登记为 replay 断言（由量纲引擎独立审计），避免制造噪音。
+            if "[" in latex_content and "]" in latex_content:
+                continue
+
             # 分割等式链
             parts = [p.strip() for p in latex_content.split("=")]
             if len(parts) >= 2:
@@ -768,7 +829,8 @@ def replay(tree: Any) -> List[ClaimResult]:
                     claim_type="equality",
                     verdict=verdict,
                     evidence=evidence,
-                    steps=steps
+                    steps=steps,
+                    error_type=_ILLEGAL_DERIVATION if verdict == Verdict.INVALID else None,
                 ))
             else:
                 results.append(ClaimResult(

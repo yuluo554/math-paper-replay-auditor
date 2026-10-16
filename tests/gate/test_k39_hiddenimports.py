@@ -14,7 +14,7 @@ from pathlib import Path
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-BUILD_EXE_PATH = REPO_ROOT / "packaging" / "build_exe.py"
+BUILD_EXE_PATH = REPO_ROOT / "build_tools" / "build_exe.py"
 
 
 def _extract_lists_from_file(file_path: Path, var_names: list) -> dict:

@@ -65,7 +65,7 @@ class ParseStats:
 
 
 def _strip_comments(text: str) -> str:
-    """剥离注释（% 到行尾，但保留 \%）。"""
+    r"""剥离注释（% 到行尾，但保留 \%）。"""
     lines = text.split('\n')
     result = []
     for line in lines:
@@ -166,8 +166,10 @@ def _parse_env_stack(text: str) -> Tuple[List[Dict[str, Any]], List[str], ParseS
             content = text[start:end].strip()
 
             if env_name in MATH_ENVS:
+                label_match = re.search(r'\\label\{([^}]+)\}', content)
                 equations.append({
                     'type': env_name,
+                    'label': label_match.group(1) if label_match else None,
                     'content': content,
                 })
             elif env_name in ('theorem', 'lemma', 'proposition', 'corollary'):
@@ -199,11 +201,28 @@ def _parse_env_stack(text: str) -> Tuple[List[Dict[str, Any]], List[str], ParseS
         stats.total_macros += 1
         stats.recognized_macros += 1
 
+    # 结构性环境（依赖图的节点类型）；引用所在环境决定悬空引用 vs 依赖断链
+    structural_envs = ('theorem', 'lemma', 'proposition', 'corollary', 'proof')
+
+    def _enclosing_structural_env(pos: int) -> Optional[str]:
+        """返回包含 pos 的最内层结构性环境名；无则 None。"""
+        best: Optional[Tuple[int, str]] = None
+        for env_name, spans in env_contents.items():
+            if env_name not in structural_envs:
+                continue
+            for start, end in spans:
+                if start <= pos <= end:
+                    span = end - start
+                    if best is None or span < best[0]:
+                        best = (span, env_name)
+        return best[1] if best else None
+
     for match in re.finditer(r'\\(?:ref|eqref)\{([^}]+)\}', text):
         refs.append({
             'ref': match.group(1),
             'type': 'ref',
             'pos': match.start(),
+            'env': _enclosing_structural_env(match.start()),
         })
         stats.total_macros += 1
         stats.recognized_macros += 1
