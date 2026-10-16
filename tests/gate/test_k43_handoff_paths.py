@@ -19,9 +19,11 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 PLAN_DIR = REPO_ROOT / "plan"
 
-# 盘符绝对路径：独立的盘符 token（前一个字符非字母），
-# 排除 `https://` 里的 `s:/` 这类 URL 误报
-DRIVE_ABS = re.compile(r"(?<![A-Za-z])[A-Za-z]:[\\/]")
+# 判据设计（锚"本机真实路径"，不锚形状）：
+# 真泄漏 = 盘符 + 具体路径段（如 D:\[开发机盘符目录]\...、C:\Users\x\...）；
+# 占位符与正则口径（`X:/`、`[A-Za-z]:[\\/]`、`https:/`）不算——
+# 它们描述"要查什么形态"，不是本机实际路径。
+DRIVE_ABS = re.compile(r"(?<![A-Za-z])[A-Za-z]:[\\/][^\s`\)\]]")
 # 用户目录形态：\Users\<name>\ 或 /home/<name>/（用户名属个人标记）
 HOME_DIR = re.compile(r"[\\/](?:Users|home)[\\/][^\\/\s\"']+")
 

@@ -88,7 +88,9 @@ dangling_ref 3/3 · dep_chain_break 3/3
 | push main | 38859903126 | `78e1dbd` | `74297aa` | ✅ 成功 |
 | push tag v0.1.0 | 38859909350 | `78e1dbd` | `74297aa` | ✅ 成功 |
 | push main（改写后） | 38861249412 | — | `4b2a21b` | ✅ 成功 |
-| push main（发布留档补全） | 38862249413 | — | `a5ce6ff` | ✅ 成功（**最终发布基线**） |
+| push main（发布留档补全） | 38862249413 | — | `a5ce6ff` | ✅ 成功（发布基线） |
+| push main（RELEASE 定稿） | 38862782175 | — | `05c564d` | ✅ 成功 |
+| push tag v0.1.0 | 38862788765 | — | `05c564d` | ✅ 成功（tag 独立 run） |
 
 > **历史改写说明（如实留档，非回填美化）**：脱敏扫描发现 plan/HANDOFF-M1~M5
 > 含本机绝对路径启动命令（已随公开仓库发布），依 skill 纪律用
@@ -96,7 +98,9 @@ dangling_ref 3/3 · dep_chain_break 3/3
 > 改写后旧的 head_sha 已不可达，故上表并列"改写前/改写后"两列，
 > 并给出旧→新提交映射：`677e703→facfebb`、`c16534f→2cb3dc9`、`78e1dbd→74297aa`。
 > 改写前那 4 次 CI run 的结论**原样保留**（改动仅限 head_sha 可追溯性），
-> 非改写产物。最终发布基线 = `a5ce6ff`（run `38862249413` 全绿）。
+> 非改写产物。发布基线 = `a5ce6ff`（run `38862249413` 全绿）；
+tag `v0.1.0` 打在 `05c564d`（相对基线仅 plan/RELEASE-M6.md 一处文档改动，
+`git diff --name-only a5ce6ff..05c564d` 可核证），main 与 tag 两 run 均绿。
 
 ### 3.3 冻结产物本体验证
 
@@ -112,7 +116,8 @@ dangling_ref 3/3 · dep_chain_break 3/3
 
 1. `gh release download v0.1.0` 下载两附件到仓库外中立目录
 2. 回下载件 sha256 与 §2.2 台账**逐位一致**
-3. GitHub 侧资产 digest 亦与台账一致（`gh release view --json assets`）
+3. GitHub 侧资产 digest 亦与台账一致（`gh release view --json assets`：
+   `793857b5…` / `120c4ba1…`，与 §2.2 逐位相符）
 4. 中立目录内冻结态冒烟：`selftest` exit 0、`bench` exit 0（检出率 100%）、
    GUI 未知参数 exit 2
 
@@ -205,7 +210,7 @@ K47（原只查子串 → 现要求 README 路径真实存在、模块可执行�
 |---|---|---|
 | 建仓 + 首推 | ✅ | `github.com/yuluo554/math-paper-replay-auditor`（公开，SSH/443 推送） |
 | CI 首跑 + 修复 | ✅ | 首跑 ubuntu 红（路径形态缺陷）→ 修复 → 三矩阵全绿 |
-| tag `v0.1.0` | ✅ | 打在 CI 绿提交 `a5ce6ff` 上（run `38862249413` 全绿） |
+| tag `v0.1.0` | ✅ | 打在 `05c564d` 上（tag run `38862788765` 全绿）；产物构建自 `a5ce6ff` |
 | GitHub Release + 附件 | ✅ | `releases/tag/v0.1.0`，附 `auditor-cli.exe` + `auditor.exe` |
 | Release 资产核验 | ✅ | `gh release view --json assets`：draft=false，两附件在列，digest 与台账一致 |
 | 附件回下载校验 | ✅ | 下载件 sha256 与台账逐位一致 + 中立目录冻结冒烟通过 |
