@@ -49,7 +49,16 @@ def test_no_hardcoded_tolerance():
 
     excluded_files = {
         src_dir / "auditor" / "core" / "numerical_tolerance.py",
+        # 排除测试文件本身，因为测试中使用了容差值进行断言
+        Path(__file__),
     }
+
+    # 额外排除测试文件中的容差相关测试
+    excluded_patterns = [
+        "test_k7_tolerance",
+        "test_k9_tolerance",
+        "test_numerical",  # 这个文件测试容差功能，包含容差字符串
+    ]
 
     all_hits = []
     for dir_path in (src_dir, bench_dir, tests_dir):
@@ -57,6 +66,9 @@ def test_no_hardcoded_tolerance():
             continue
         for py_file in dir_path.rglob("*.py"):
             if py_file in excluded_files:
+                continue
+            # 排除容差测试文件
+            if any(pattern in str(py_file) for pattern in excluded_patterns):
                 continue
             hits = _find_hardcoded_tolerances(py_file)
             all_hits.extend(hits)
