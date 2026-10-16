@@ -23,15 +23,19 @@
 
 | 附件 | 说明 | 大小 |
 |---|---|---|
-| `auditor-cli.exe` | CLI（无 Qt，含 antlr4 全栈） | 27,273,442 字节 |
-| `auditor.exe` | GUI（含 PySide6，窗口模式） | 72,660,106 字节 |
+| `auditor-cli.exe` | CLI（无 Qt，含 antlr4 全栈） | 27,275,067 字节 |
+| `auditor.exe` | GUI（含 PySide6，窗口模式） | 72,661,415 字节 |
 
 ### 2.2 sha256（以最终基线为准）
 
 | 附件 | sha256 |
 |---|---|
-| `auditor-cli.exe` | `2d75011182bebb9207539b91dafe1284f9ad56df1ddd162a321212e7a97df1d7` |
-| `auditor.exe` | `8d50899d40e48a00b346238a0ae9a0ccf30a30188e4ecccc633f27416e44f6fa` |
+| `auditor-cli.exe` | `fe46bad4b1c12ea69567c6f9e0e5869dc58f5b1a85bbe8e7bd4fd64d4af85f19` |
+| `auditor.exe` | `6c520369c28f4b56ad764e671e40fa2290c6c299ac98e41f0a6be30c9a81ddee` |
+
+> 发布基线纪律：本轮构建发生在 **CI 绿提交 `c16534f`**、工作树与该提交一致
+> （`git status` 干净）之后，故这三个数（大小/sha256）对应最终上传件。
+> 早前几轮的哈希已随源码修复作废，不在正文保留。
 
 > **构建可复现性口径**（skill 纪律）：上表是**本次基线**的产物哈希。
 > PyInstaller 产物含构建期 PE 时间戳，**跨次重建不承诺逐字节一致**——
@@ -59,11 +63,21 @@ dangling_ref 3/3 · dep_chain_break 3/3
 
 | 面 | 命令 | 结果 |
 |---|---|---|
-| 3.12 全量 | `py -3.12 -m pytest tests/ -q` | **271 passed** |
-| 3.8 全量 | `py -3.8 -m pytest tests/ -q` | **271 passed**（收集数一致） |
-| 干净 venv 全量 | `.\/.cleanenv/Scripts/python.exe -m pytest tests/ -q` | **271 passed** |
+| 3.12 全量 | `py -3.12 -m pytest tests/ -q` | **275 passed** |
+| 3.8 全量 | `py -3.8 -m pytest tests/ -q` | **275 passed**（收集数一致） |
+| 干净 venv 全量 | `./.cleanenv/Scripts/python.exe -m pytest tests/ -q` | **271 passed**（该轮早于 K56 加入） |
 
-守门文件数：35（K1–K55）。
+守门文件数：36（K1–K56）。
+
+### 3.2b CI 实跑（首推后）
+
+| 项 | 结果 |
+|---|---|
+| 矩阵 | windows-latest/py3.8 · windows-latest/py3.12 · ubuntu-latest/py3.12 |
+| 结果 | ✅ **三 job 全绿**（run `38859335607`，head `c16534f`） |
+| 首跑（`677e703`） | ❌ ubuntu 红：POSIX 绝对路径被 `lstrip("/")` 归一成仓库相对路径 |
+| 修复后 | ✅ 全绿；缺陷已加守门 K56 锁死（含变异验证） |
+| 对账 | push 事件 2 次 = run 2 次，逐条配对（`677e703` 红 → `c16534f` 绿） |
 
 ### 3.3 冻结产物本体验证
 
@@ -112,6 +126,7 @@ dangling_ref 3/3 · dep_chain_break 3/3
 | K53 | sympy LaTeX 运行时前提（antlr pin + 实跑 parse_latex + 失败不得判 ok） | `test_k53_latex_runtime.py` |
 | K54 | audit 编排链 + 双轨报告（同源/可复现/零外链）+ selftest 可证伪 | `test_k54_audit_pipeline.py` |
 | K55 | 文本行尾冻结（CR 守门 + 生成物 LF + zip 确定性口径） | `test_k55_byte_freeze.py` |
+| K56 | 路径形态归一（POSIX 绝对路径不得被 rebase） | `test_k56_path_forms.py` |
 
 **增强**：K35（原先 CI 缺失时静默通过 → 现要求 CI 存在 + 双解释器矩阵 + PYTHONUTF8 + 裸 console script 冒烟）、
 K47（原只查子串 → 现要求 README 路径真实存在、模块可执行）。
@@ -122,13 +137,11 @@ K47（原只查子串 → 现要求 README 路径真实存在、模块可执行�
 
 | 项 | 状态 | 说明 |
 |---|---|---|
-| 本地 tag `v0.1.0` | ✅ | 打在收尾提交上 |
-| 建仓 + 首推 | ⬜ | 待执行 |
-| CI 首跑 | ⬜ | **仓库此前无远端，CI 从未跑过**——本文件不写"CI 绿" |
-| GitHub Release + 附件 | ⬜ | 待执行 |
-| Release 附件回下载校验 | ⬜ | 发布后执行（`gh release download` → sha256 对账） |
+| 本地 tag `v0.1.0` | ✅ | 打在 CI 绿提交 `c16534f` 上 |
+| 建仓 + 首推 | ✅ | `github.com/yuluo554/math-paper-replay-auditor`（公开，SSH/443 推送） |
+| CI 首跑 + 修复 | ✅ | 首跑 ubuntu 红（路径形态缺陷）→ 修复 → 三矩阵全绿（`38859335607`） |
+| GitHub Release + 附件 | ✅ | tag `v0.1.0` + 两个 exe |
+| Release 附件回下载校验 | ✅ | `gh release download` → sha256 对账一致 |
 
-> 依 skill 纪律：**未推送 = 未跑 CI**。发布前一切"绿"均为
-> **本地等价校验**，可指认的替代证据 = 双解释器全量 ×271 + 干净 venv ×271 +
-> 冻结态对账 + 基准 100%/0%。不可本机实跑的通路（ubuntu runner 行为、
-> 真实 CI 管道编码）显式标注**待首推验证**。
+> **CI 绿是本轮实跑结果**（非"本地等价校验"）：三矩阵全绿，push 事件数=run 数（2=2）逐条配对。
+> 首跑失败如实留档（`677e703` 红、原因、修复提交 `c16534f`），未遮掩。
