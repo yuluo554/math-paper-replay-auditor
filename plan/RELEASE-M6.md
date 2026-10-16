@@ -23,17 +23,17 @@
 
 | 附件 | 说明 | 大小 |
 |---|---|---|
-| `auditor-cli.exe` | CLI（无 Qt，含 antlr4 全栈） | 27,274,488 字节 |
-| `auditor.exe` | GUI（含 PySide6，窗口模式） | 72,660,695 字节 |
+| `auditor-cli.exe` | CLI（无 Qt，含 antlr4 全栈） | 27,274,163 字节 |
+| `auditor.exe` | GUI（含 PySide6，窗口模式） | 72,660,794 字节 |
 
 ### 2.2 sha256（以最终基线为准）
 
 | 附件 | sha256 |
 |---|---|
-| `auditor-cli.exe` | `8077731f99ae734dc74424e5e815aa9e2071a8487a26e24a09a014da1308d75a` |
-| `auditor.exe` | `c3d2a958dd7dce0cb0b48f1026a128b318edea7c1c939e7a2ce00abc9d76d60e` |
+| `auditor-cli.exe` | `793857b54aa123d63b87644d7985f5cf6f65559e33f374c83e412b31deb9d805` |
+| `auditor.exe` | `120c4ba1e6bdc8d7ffe90a1204809c87e0b20bf6d3b84f6b2d79163912162838` |
 
-> 发布基线纪律：本轮构建发生在 **CI 绿提交 `4b2a21b`**、工作树与该提交一致
+> 发布基线纪律：本轮构建发生在 **CI 绿提交 `a5ce6ff`**、工作树与该提交一致
 > （`git status` 干净）之后，故这三个数（大小/sha256）对应最终上传件。
 > 早前几轮的哈希已随源码修复作废，不在正文保留。
 
@@ -88,6 +88,7 @@ dangling_ref 3/3 · dep_chain_break 3/3
 | push main | 38859903126 | `78e1dbd` | `74297aa` | ✅ 成功 |
 | push tag v0.1.0 | 38859909350 | `78e1dbd` | `74297aa` | ✅ 成功 |
 | push main（改写后） | 38861249412 | — | `4b2a21b` | ✅ 成功 |
+| push main（发布留档补全） | 38862249413 | — | `a5ce6ff` | ✅ 成功（**最终发布基线**） |
 
 > **历史改写说明（如实留档，非回填美化）**：脱敏扫描发现 plan/HANDOFF-M1~M5
 > 含本机绝对路径启动命令（已随公开仓库发布），依 skill 纪律用
@@ -95,7 +96,7 @@ dangling_ref 3/3 · dep_chain_break 3/3
 > 改写后旧的 head_sha 已不可达，故上表并列"改写前/改写后"两列，
 > 并给出旧→新提交映射：`677e703→facfebb`、`c16534f→2cb3dc9`、`78e1dbd→74297aa`。
 > 改写前那 4 次 CI run 的结论**原样保留**（改动仅限 head_sha 可追溯性），
-> 非改写产物。最终发布基线 = `4b2a21b`（run `38861249412` 全绿）。
+> 非改写产物。最终发布基线 = `a5ce6ff`（run `38862249413` 全绿）。
 
 ### 3.3 冻结产物本体验证
 
@@ -204,7 +205,7 @@ K47（原只查子串 → 现要求 README 路径真实存在、模块可执行�
 |---|---|---|
 | 建仓 + 首推 | ✅ | `github.com/yuluo554/math-paper-replay-auditor`（公开，SSH/443 推送） |
 | CI 首跑 + 修复 | ✅ | 首跑 ubuntu 红（路径形态缺陷）→ 修复 → 三矩阵全绿 |
-| tag `v0.1.0` | ✅ | 打在 CI 绿提交 `4b2a21b` 上（run `38861249412` 全绿） |
+| tag `v0.1.0` | ✅ | 打在 CI 绿提交 `a5ce6ff` 上（run `38862249413` 全绿） |
 | GitHub Release + 附件 | ✅ | `releases/tag/v0.1.0`，附 `auditor-cli.exe` + `auditor.exe` |
 | Release 资产核验 | ✅ | `gh release view --json assets`：draft=false，两附件在列，digest 与台账一致 |
 | 附件回下载校验 | ✅ | 下载件 sha256 与台账逐位一致 + 中立目录冻结冒烟通过 |
