@@ -24,8 +24,9 @@ def audit_paper(input_path: str, with_llm: bool = False) -> int:
 
 def run_benchmark(only: Optional[List[str]] = None, verbose: bool = False) -> int:
     """运行基准套件。退出码：0=全绿, 1=未达标, 2=用法错误。"""
-    # TODO M4: 实现
-    return 0
+    from auditor.benchmark import run_benchmark as benchmark_runner
+    result = benchmark_runner(only=only, verbose=verbose)
+    return result.exit_code
 
 
 def fetch_arxiv(arxiv_id: str) -> int:

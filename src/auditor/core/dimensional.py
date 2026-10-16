@@ -239,8 +239,12 @@ def _extract_dimension_from_expr(expr_str: str) -> Optional[DimensionVector]:
     import re
 
     # 匹配单位模式
+    # 注意：需要排除数学变量（如 f, h, x 等）
+    # 单位应该是独立的，不跟在变量后面或后面跟括号
     unit_patterns = [
-        r'\b(m|kg|s|A|K|mol|cd|Hz|N|J|W|Pa|C|V|Ω|F|H|Wb|T|lm|lx)\b',
+        # 匹配单位，但排除后面跟括号的情况（函数调用）
+        # 也排除前面是字母的情况（变量名的一部分）
+        r'(?<![a-zA-Z])\b(m|kg|s|A|K|mol|cd|Hz|N|J|W|Pa|C|V|Ω|F|H|Wb|T|lm|lx)\b(?!\')',
         r'\b(m/s|kg/m\^3|N·m|J/s)\b',
     ]
 
