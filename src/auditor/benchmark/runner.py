@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -51,8 +52,21 @@ def _get_root() -> Path:
 
 
 def _resolve_repo_path(rel_path: str) -> Path:
-    """把仓库相对路径（如 data/benchmark/truth.json）解析为可打开路径。"""
-    rel = rel_path.replace("\\", "/").lstrip("/")
+    """把路径解析为可打开路径。
+
+    绝对路径**按形态识别**、原样返回；仓库相对路径挂到数据根下。
+
+    不得依赖 `Path(...).is_absolute()` 单独判断：Windows 上 POSIX 形态的
+    `/tmp/x` 不算绝对路径（无盘符），会被误当仓库相对路径并拼成
+    `<root>/tmp/x`——在 Linux（CI）上这就是读错文件。
+    也不得对路径做 lstrip("/")：那会把 /tmp/x 变成仓库相对的 tmp/x。
+    """
+    normalized = rel_path.replace("\\", "/")
+    is_posix_absolute = normalized.startswith("/")
+    is_drive_absolute = bool(re.match(r"^[A-Za-z]:/", normalized))
+    if is_posix_absolute or is_drive_absolute:
+        return Path(rel_path)
+    rel = normalized.lstrip("./")
     return _get_root() / Path(*rel.split("/"))
 
 
