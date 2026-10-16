@@ -285,11 +285,6 @@ py -3.8 -c "from data.benchmark.generator import main; main('data/benchmark', mi
 /goal 读取 "plan/HANDOFF-M2.md" 继续完成任务
 ```
 
-或完整路径：
-```
-/goal 读取 "plan/HANDOFF-M2.md" 继续完成任务
-```
-
 ---
 
 ## 八、待定决策（需用户拍板）

@@ -74,10 +74,22 @@ dangling_ref 3/3 · dep_chain_break 3/3
 | 项 | 结果 |
 |---|---|
 | 矩阵 | windows-latest/py3.8 · windows-latest/py3.12 · ubuntu-latest/py3.12 |
-| 结果 | ✅ **三 job 全绿**（run `38859335607`，head `c16534f`） |
 | 首跑（`677e703`） | ❌ ubuntu 红：POSIX 绝对路径被 `lstrip("/")` 归一成仓库相对路径 |
-| 修复后 | ✅ 全绿；缺陷已加守门 K56 锁死（含变异验证） |
-| 对账 | push 事件 2 次 = run 2 次，逐条配对（`677e703` 红 → `c16534f` 绿） |
+| 首次修复后（`c16534f`，run `38859335607`） | ✅ 三 job 全绿 |
+| 收尾提交（`78e1dbd`，main，run `38859903126`） | ✅ 全绿 |
+| 收尾提交（`78e1dbd`，tag `v0.1.0`，run `38859909350`） | ✅ 全绿（**tag push 产生独立 run，同 sha 两个维护分支故为两 run，均绿**） |
+
+**run 对账**（口径：每个 push/tag 事件恰一 run，head_sha 逐条配对）
+
+| 事件 | run id | head_sha | 结论 |
+|---|---|---|---|
+| push main | 38858693069 | `677e703` | ❌ 失败（已如实留档，原因=路径形态缺陷） |
+| push main | 38859335607 | `c16534f` | ✅ 成功（修复后） |
+| push main | 38859903126 | `78e1dbd` | ✅ 成功 |
+| push tag v0.1.0 | 38859909350 | `78e1dbd` | ✅ 成功 |
+
+> push 事件 4 次 = run 4 次（其中 tag 事件 1 次）；**首跑失败未遮掩**，
+> 失败原因与修复提交如实配对。
 
 ### 3.3 冻结产物本体验证
 
@@ -88,6 +100,14 @@ dangling_ref 3/3 · dep_chain_break 3/3
 | CLI 审计（干净 / 含问题） | `audit --input ...` | ✅ exit 0 / exit 1 |
 | GUI 未知参数 | `dist/auditor.exe --bogus` | ✅ exit 2 |
 | 冻结/源码自动对账 | `pytest tests/gate/test_k52_frozen_parity.py` | ✅ 3 passed |
+
+### 3.3b 发布物本体已验（回下载 + 中立目录）
+
+1. `gh release download v0.1.0` 下载两附件到仓库外中立目录
+2. 回下载件 sha256 与 §2.2 台账**逐位一致**
+3. GitHub 侧资产 digest 亦与台账一致（`gh release view --json assets`）
+4. 中立目录内冻结态冒烟：`selftest` exit 0、`bench` exit 0（检出率 100%）、
+   GUI 未知参数 exit 2
 
 ### 3.4 干净环境验证
 
@@ -137,11 +157,12 @@ K47（原只查子串 → 现要求 README 路径真实存在、模块可执行�
 
 | 项 | 状态 | 说明 |
 |---|---|---|
-| 本地 tag `v0.1.0` | ✅ | 打在 CI 绿提交 `c16534f` 上 |
 | 建仓 + 首推 | ✅ | `github.com/yuluo554/math-paper-replay-auditor`（公开，SSH/443 推送） |
-| CI 首跑 + 修复 | ✅ | 首跑 ubuntu 红（路径形态缺陷）→ 修复 → 三矩阵全绿（`38859335607`） |
-| GitHub Release + 附件 | ✅ | tag `v0.1.0` + 两个 exe |
-| Release 附件回下载校验 | ✅ | `gh release download` → sha256 对账一致 |
+| CI 首跑 + 修复 | ✅ | 首跑 ubuntu 红（路径形态缺陷）→ 修复 → 三矩阵全绿 |
+| tag `v0.1.0` | ✅ | 打在 CI 绿提交 `78e1dbd` 上（tag run `38859909350` 亦全绿） |
+| GitHub Release + 附件 | ✅ | `releases/tag/v0.1.0`，附 `auditor-cli.exe` + `auditor.exe` |
+| Release 资产核验 | ✅ | `gh release view --json assets`：draft=false，两附件在列，digest 与台账一致 |
+| 附件回下载校验 | ✅ | 下载件 sha256 与台账逐位一致 + 中立目录冻结冒烟通过 |
 
 > **CI 绿是本轮实跑结果**（非"本地等价校验"）：三矩阵全绿，push 事件数=run 数（2=2）逐条配对。
 > 首跑失败如实留档（`677e703` 红、原因、修复提交 `c16534f`），未遮掩。

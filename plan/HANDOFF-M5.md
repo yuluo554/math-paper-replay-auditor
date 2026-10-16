@@ -426,11 +426,6 @@ py -3.8 -m pytest tests/benchmark/test_metrics.py -v
 /goal 读取 "plan/HANDOFF-M5.md" 继续完成任务
 ```
 
-或完整路径：
-```
-/goal 读取 "plan/HANDOFF-M5.md" 继续完成任务
-```
-
 ---
 
 ## 八、待定决策（需用户拍板）

@@ -1,8 +1,12 @@
-"""K43: HANDOFF 库内写相对路径。
+"""K43: HANDOFF 库内写相对路径（脱敏硬门）。
 
-验证：
-1. 所有 HANDOFF 文件用法行写相对路径
-2. 不含本机绝对路径
+M6 实录：原版守门遇到"含盘符路径 + 引号"就放行（本意是容忍 /goal 启动命令
+前缀里的绝对路径），结果**整条绝对路径启动命令被原样留在 HANDOFF 文件里**，
+并随公开仓库发布——正是 skill 点名的脱敏泄漏形态。
+
+根因是判据写成了"这一行有没有引号"（笼统），而不是"这条路径是不是本机绝对路径"
+（该守的东西）。修正后的判据：**HANDOFF 文件内任何位置都不得出现盘符绝对路径**
+（库内一律相对路径；绝对路径只存在于用户侧会话启动命令，不入库）。
 """
 
 from __future__ import annotations
@@ -15,37 +19,82 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 PLAN_DIR = REPO_ROOT / "plan"
 
+# 盘符绝对路径：独立的盘符 token（前一个字符非字母），
+# 排除 `https://` 里的 `s:/` 这类 URL 误报
+DRIVE_ABS = re.compile(r"(?<![A-Za-z])[A-Za-z]:[\\/]")
+# 用户目录形态：\Users\<name>\ 或 /home/<name>/（用户名属个人标记）
+HOME_DIR = re.compile(r"[\\/](?:Users|home)[\\/][^\\/\s\"']+")
 
-def test_handoff_files_use_relative_paths():
-    """K43: HANDOFF 文件用法行写相对路径。"""
-    handoff_files = list(PLAN_DIR.glob("HANDOFF-*.md"))
+# 允许的例外：脱敏扫描器自身的正则（描述要查什么，不是本机路径），
+# 以及文档里"不写 D:\... 应写 plan/..."的约定说明行。
+ALLOWED_MARKERS = (
+    "git grep -E",          # 扫描器正则行
+    "不写 ",                # 约定说明行
+)
 
-    for handoff_path in handoff_files:
-        content = handoff_path.read_text(encoding="utf-8")
 
-        # 检查用法行
-        # 应该写 plan/HANDOFF-Mx.md，不写 D:\...\plan\HANDOFF-Mx.md
-        lines = content.split("\n")
-        for line in lines:
-            if "/goal" in line or "读取" in line:
-                # 不应包含 Windows 绝对路径（盘符路径）
-                # 但允许 /goal 命令前缀
-                # 检查是否包含 D:\ 或 C:\ 这样的盘符路径
-                import re
-                windows_path_pattern = r'[A-Za-z]:\\'
-                if re.search(windows_path_pattern, line):
-                    # 如果包含 Windows 路径，检查是否在引号内且是启动命令
-                    # 启动命令从用户侧拼绝对路径是允许的
-                    if '"' in line or "'" in line:
-                        # 路径在引号内，这是启动命令，允许
-                        pass
-                    else:
-                        assert False, f"HANDOFF 文件不应包含 Windows 绝对路径: {line}"
+def _handoff_files():
+    return sorted(PLAN_DIR.glob("HANDOFF-*.md"))
 
 
 def test_handoff_files_exist():
     """K43: 所有 HANDOFF 文件存在。"""
-    expected = ["HANDOFF-M1.md", "HANDOFF-M2.md", "HANDOFF-M3.md", "HANDOFF-M4.md", "HANDOFF-M5.md"]
+    expected = ["HANDOFF-M1.md", "HANDOFF-M2.md", "HANDOFF-M3.md",
+                "HANDOFF-M4.md", "HANDOFF-M5.md", "HANDOFF-M6.md"]
     for name in expected:
-        path = PLAN_DIR / name
-        assert path.exists(), f"HANDOFF 文件不存在: {name}"
+        assert (PLAN_DIR / name).exists(), f"HANDOFF 文件不存在: {name}"
+
+
+def test_handoff_files_use_relative_paths():
+    """K43: HANDOFF 文件内不得出现任何盘符绝对路径（含引号内的启动命令）。"""
+    offenders = []
+    for path in _handoff_files():
+        for lineno, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+            if not DRIVE_ABS.search(line):
+                continue
+            if any(marker in line for marker in ALLOWED_MARKERS):
+                continue
+            offenders.append(f"{path.name}:{lineno}: {line.strip()[:100]}")
+
+    assert not offenders, (
+        "K43 违规: HANDOFF 含本机绝对路径（库内一律相对路径；"
+        "绝对路径只出现在用户侧会话启动命令，不入库）:\n" + "\n".join(offenders)
+    )
+
+
+def test_handoff_files_have_no_home_directory_markers():
+    """K43: HANDOFF 不得含用户目录标记（个人标记脱敏）。"""
+    offenders = []
+    for path in _handoff_files():
+        for lineno, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+            if HOME_DIR.search(line):
+                offenders.append(f"{path.name}:{lineno}: {line.strip()[:100]}")
+
+    assert not offenders, (
+        "K43 违规: HANDOFF 含用户目录标记:\n" + "\n".join(offenders)
+    )
+
+
+def test_handoff_has_relative_usage_line():
+    """K43: 每个 HANDOFF 必须有一条相对路径的用法行（非空转自证）。"""
+    for path in _handoff_files():
+        text = path.read_text(encoding="utf-8")
+        assert f"plan/{path.name}" in text, (
+            f"K43: {path.name} 未见相对路径用法行 plan/{path.name}"
+        )
+
+
+def test_plan_documents_have_no_drive_paths():
+    """K43: plan/ 全目录（不止 HANDOFF）不得含盘符绝对路径。"""
+    offenders = []
+    for path in sorted(PLAN_DIR.rglob("*.md")):
+        for lineno, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+            if not DRIVE_ABS.search(line):
+                continue
+            if any(marker in line for marker in ALLOWED_MARKERS):
+                continue
+            offenders.append(f"{path.relative_to(REPO_ROOT)}:{lineno}")
+
+    assert not offenders, (
+        "K43 违规: plan/ 文档含盘符绝对路径:\n" + "\n".join(offenders[:20])
+    )
