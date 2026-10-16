@@ -20,9 +20,10 @@ REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 PLAN_DIR = REPO_ROOT / "plan"
 
 # 判据设计（锚"本机真实路径"，不锚形状）：
-# 真泄漏 = 盘符 + 具体路径段（如 D:\[开发机盘符目录]\...、C:\Users\x\...）；
-# 占位符与正则口径（`X:/`、`[A-Za-z]:[\\/]`、`https:/`）不算——
+# 真泄漏 = 盘符 + 具体路径段（本机盘符目录名 + 用户名目录）；
+# 占位符与正则口径（`X:/`、盘符正则本身、URL 的 `s:/`）不算——
 # 它们描述"要查什么形态"，不是本机实际路径。
+# 注意：本文件不得逐字复述扫描器要匹配的 token（留档/源码零词面）。
 DRIVE_ABS = re.compile(r"(?<![A-Za-z])[A-Za-z]:[\\/][^\s`\)\]]")
 # 用户目录形态：\Users\<name>\ 或 /home/<name>/（用户名属个人标记）
 HOME_DIR = re.compile(r"[\\/](?:Users|home)[\\/][^\\/\s\"']+")
