@@ -101,7 +101,8 @@ def audit_paper(
         text = render_markdown(report)
 
     if output_path:
-        Path(output_path).write_text(text, encoding="utf-8")
+        # newline="\n"：Windows 默认换行翻译成 CRLF，破坏 K55 字节冻结
+        Path(output_path).write_text(text, encoding="utf-8", newline="\n")
         print(f"报告已写入: {output_path}")
     else:
         print(text)

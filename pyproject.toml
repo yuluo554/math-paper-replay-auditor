@@ -1,6 +1,6 @@
 [project]
 name = "math-paper-replay-auditor"
-version = "0.1.0"
+version = "0.1.1"
 description = "数学论文可验证重放审计器——首个面向 openPangu-2.0-Flash 的论文数学断言审计工具"
 readme = "README.md"
 license = {text = "MIT"}

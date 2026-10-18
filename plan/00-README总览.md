@@ -16,7 +16,10 @@
 | plan/05-发布与交付.md | 依赖分层 / 打包白名单 / 脱敏 / 三件套 | ✅ v1 定稿（2026-10-16，K33-K49） |
 | plan/06-架构与技术选型.md | 选型 / 目录布局 / 分层与单向依赖 / 决策记录 | ✅ v1 定稿（2026-10-16） |
 | plan/HANDOFF-M1.md | 跨会话交接快照（M1 续接用） | ✅ v1 定稿（2026-10-16，M0 收尾落盘） |
-| plan/RELEASE-M6.md | 发布留档（三件套之一） | ⬜ M6 落盘 |
+| plan/RELEASE-M6.md | v0.1.0 发布留档 | ✅ M6 落盘 |
+| plan/RELEASE-M7.md | **v0.1.1 发布留档**（回访修复 + 补丁版本） | ✅ M7 落盘 |
+| docs/技术报告.md | 技术报告（§三 第 3 项实物） | ✅ v0.1.1 |
+| docs/demo/demo.gif · demo-clean.html · demo-error.html | 演示素材（§三 第 6 项实物） | ✅ v0.1.1 |
 | data/README.md | 依据查证/可获取性/合成数据纪律 | ✅ v1 定稿 |
 
 ## 二、决策记录表
@@ -56,13 +59,29 @@
 | SymPy 符号重放 | GitHub API 200 ✅ | 纯 Python 依赖，随 exe 内嵌 | 免安装 exe 内跑通重放路径 | ✅ M3 已实现 |
 | 数值独立复算 | 自产双路径实现 | 随包代码 | 两路径实现独立（守门断言不共享核心函数） | ✅ M3 已实现 |
 | 量纲代数 | 自产 | 随包代码 | 免安装 exe 内跑通 | ✅ M3 已实现 |
-| 依赖图可视化 HTML（0 外链） | 自产 | 随包代码 | HTML 无外链（守门扫描） | ⬜ 待 M4 实现 |
+| 依赖图可视化 HTML（0 外链） | 自产 | 随包代码 | HTML 无外链（守门扫描） | ✅ M6 实现（`report/renderer` 与 GUI 导出 HTML 均 0 外链，`test_gui_controller` 断言） |
 | 合成论文植入真值基准 | 自产生成器 | 随包数据（白名单入包） | 生成器可复跑；真值库只存输入+期望 | ✅ M1 已交付（18 样本 + 真值 + 白名单） |
-| 预置模型输出快照 | 自产（含生成参数+sha256） | 随包数据白名单 | sha256 留档；离线复跑一致 | ⬜ 待 M3 引擎就绪后 |
-| Crossref DOI 交叉核对 | API 200 ✅ | 扩展项（联网开关） | 离线降级：跳过并显式标注 | ⬜ 待 M1 |
+| 预置模型输出快照 | 自产（含生成参数+sha256） | 随包数据白名单 | sha256 留档；离线复跑一致 | ⬜ 扩展项（首期不交付、不进判定路径；README 已声明） |
+| Crossref DOI 交叉核对 | API 200 ✅ | 扩展项（联网开关） | 离线降级：跳过并显式标注 | ⬜ 扩展项（首期不交付） |
 | 真实论文回归集（不误报） | arXiv id 元数据（不分发全文） | 不入包（可选本地自取） | 只存 id + 本地解析产物 | ✅ M1 骨架已落盘 |
 | 论文再分发合规 | arXiv 使用条款 | 不随仓分发全文 | 入库时核对条款措辞 | ⬜ 待核对 |
 | 模型许可合规 | OPENPANGU MODEL LICENSE 2.0 | 不分发权重即合规 | 入库时核对条款措辞 | ⬜ 待核对 |
+
+## 三之二、招牌动词表（能力名词 → 交付态命令 → 断言基准）
+
+> 口径：填不出的词不得进标题、定位宣言、README 首段或输出 schema（preflight ⑳）。
+> v0.1.1 补建。
+
+| 能力名词 | 哪条交付态命令产出它 | 哪条基准/测试断言它 |
+|---|---|---|
+| LaTeX 结构解析 | `auditor audit --input X` 的 `coverage_report` | `tests/unit/test_parser.py` + `bench` 解析覆盖率 |
+| 符号断言重放 | `audit` 的 `claims[*].verdict`（ok/invalid/undecidable） | `tests/unit/test_replay.py` + `bench` 检出率 |
+| 数值独立复算 | `audit` 的数值类 claim（与符号路径实现独立） | `tests/unit/test_numerical.py` |
+| 量纲一致性 | `audit` 的 dimension 类 claim | `tests/unit/test_dimensional.py` |
+| 依赖图完整性 | `audit` 的 dependency 类 claim（悬空/幽灵/断链） | `tests/unit/test_graph.py` |
+| 内置评测基准 | `auditor bench` / `bench --only <type>` | 18 样本 + 覆盖度门控（分母反射自代码常量） |
+| 桌面应用（审计+导出） | `auditor.exe`（窗口）/ `auditor.exe --selftest` | `tests/test_gui_controller.py` 13 条 |
+| 三格式报告导出 | 窗口「导出报告」/ `audit --format json --output` | `test_gui_controller::TestController::test_export_three_formats` |
 
 ## 四、里程碑状态
 
@@ -75,7 +94,7 @@
 | **M4 基准** ✅ | 模块⑥ 基准套件达标 + 探活全红 | 误报率 0（或显式声明未测）；覆盖度分母反射自代码常量；探活断言"坏实现被判未达标" | ✅ 已完成（2026-10-16） |
 | **M5 交付** ✅ | 桌面 + CLI、打包 exe、模型开关 | 免安装 exe 内能力可达（依赖内嵌/随包数据白名单已声明）；降级路径真实存在；K33-K49 守门全绿；双解释器 3.8/3.12 全绿 | ✅ 已完成（2026-10-16）；**M6 审查发现交付层存在三层缺陷，已在 M6 修复** |
 | **M6 发布** ✅ | GitHub Release | **三件套：①git tag `v0.1.0` ②Release 附双 exe（sha256 留档 + 回下载对账）③`plan/RELEASE-M6.md`** | ✅ 已完成（2026-10-16）；CI 三矩阵全绿；脱敏全历史 0 命中 |
-| **M7 收尾** | 收尾固化 / 品牌化 | 发布后元信息终检、缓议项清零逐条全表、README 状态行 | ⬜ 待执行（见 plan/HANDOFF-M7.md） |
+| **M7 回访修复（v0.1.1）** ✅ | 出题回访缺陷修复 + 补丁版本 | 桌面应用真实现（审计/导出接线 + 13 条测试）、LICENSE、清垃圾文件、技术报告与演示、台账回填、`check_release.py` 0 FAIL | ✅ 2026-10-18 完成 |
 
 ### 四之二、M6 交付前全面审查结论（2026-10-16）
 

@@ -54,9 +54,11 @@ data/raw_eprint/
 *.tar.gz
 *.tex.bak
 
-# Demo assets (regenerated)
-docs/demo/*.gif
+# Demo assets：demo.gif 与两份 demo HTML 是 §三 承诺的交付物 → 入仓
+# （中间帧 PNG 与临时目录不入仓）
 docs/demo/*.png
+docs/demo/_frames/
+release/
 
 # Data (local only, not in repo)
 data/real_papers/*.tex

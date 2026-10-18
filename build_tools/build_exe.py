@@ -74,6 +74,7 @@ GUI_HIDDENIMPORTS = [
     "auditor.core.numerical_tolerance",
     "auditor.pipeline",
     "auditor.gui.main_window",
+    "auditor.gui.window",
     "auditor.gui.pipelines",
     # 同 CLI：antlr4 是 parse_latex 的运行时前提，缺则冻结态静默降级。
     "antlr4",
@@ -84,8 +85,33 @@ GUI_HIDDENIMPORTS = [
     "sympy.parsing.latex._antlr.latexparser",
 ]
 
-# GUI 排除项（CLI 不需要的）
-GUI_EXCLUDES = []
+# GUI 排除项：只用到 QtCore/QtGui/QtWidgets。PySide6 的 hook 会把 Quick/Qml/Pdf/
+# OpenGL 等 DLL 一并收进来（onefile 从 ~45MB 涨到 ~112MB），对纯窗口应用无用。
+# 2026-10-18：v0.1.0 的 GUI exe 72MB，本轮补导出后一度涨到 112MB，排除后回落。
+GUI_EXCLUDES = [
+    "PySide6.QtQml",
+    "PySide6.QtQuick",
+    "PySide6.QtQuick3D",
+    "PySide6.QtQuickWidgets",
+    "PySide6.QtPdf",
+    "PySide6.QtPdfWidgets",
+    "PySide6.QtWebEngineCore",
+    "PySide6.QtWebEngineWidgets",
+    "PySide6.Qt3DCore",
+    "PySide6.Qt3DRender",
+    "PySide6.QtMultimedia",
+    "PySide6.QtCharts",
+    "PySide6.QtDataVisualization",
+    "PySide6.QtOpenGL",
+    "PySide6.QtOpenGLWidgets",
+    "PySide6.QtSql",
+    "PySide6.QtTest",
+    "PySide6.QtDesigner",
+    "PySide6.QtUiTools",
+    "PySide6.QtNetwork",
+    "PySide6.QtSvg",
+    "PySide6.QtPrintSupport",
+]
 
 
 def _ensure_utf8_stdio() -> None:

@@ -25,6 +25,8 @@ TEXT_SUFFIXES = {
 SKIP_PARTS = {
     ".git", ".cleanenv", ".venv", "venv", "build", "dist",
     "__pycache__", ".pytest_cache", ".eggs", "node_modules",
+    # 发布产物目录（由 tools/make_release_zip.py 生成；源件在 docs/demo/ 下受本守门覆盖）
+    "release",
 }
 
 

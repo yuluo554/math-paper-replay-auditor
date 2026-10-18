@@ -55,8 +55,9 @@ def test_no_chinese_in_filenames():
     """K46: 文件名不含中文（发布附件名一律 ASCII）。"""
     chinese_pattern = re.compile(r'[\u4e00-\u9fff]')
 
-    # 检查仓库根目录，排除 plan/ 目录（文档可以有中文名）
-    exclude_dirs = {"plan", ".git", ".github", "__pycache__", "dist", "build"}
+    # 检查仓库根目录，排除 plan/ 与 docs/（计划文档与技术报告可以有中文名；
+    # 本守门真正要管的是**发布附件名**，见上面两条 test_*_attachment_names_ascii）
+    exclude_dirs = {"plan", "docs", ".git", ".github", "__pycache__", "dist", "build"}
 
     for f in REPO_ROOT.rglob("*"):
         if f.is_file():

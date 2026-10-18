@@ -1,5 +1,7 @@
 # auditor — 数学论文可验证重放审计器
 
+**状态**：✅ v0.1.1 已发布（[Release](https://github.com/yuluo554/math-paper-replay-auditor/releases/tag/v0.1.1)）
+
 > 首个面向 openPangu-2.0-Flash 的论文数学断言审计工具。审计核心零模型依赖、可离线复跑；模型接入为可插拔显式开关。
 
 ## 特性
@@ -10,6 +12,20 @@
 - **量纲一致性审计**：确定性量纲代数，未标单位不猜测
 - **定理依赖图完整性**：悬空引用 / 幽灵 label / 依赖断链检测
 - **内置评测基准**：合成论文植入真值，误报率 0 优先
+
+## 桌面应用
+
+```bash
+# 免安装：Release 附件 auditor.exe（Windows）
+auditor.exe                 # 打开窗口
+auditor.exe --selftest      # 零 Qt 自检：解析 → 四引擎 → 报告 → 三格式导出
+```
+
+窗口：选择论文 `.tex` → 「开始审计」→ 左表逐条断言（ok/invalid/undecidable）→
+右栏人读报告 → 「导出报告（MD + JSON + HTML）」。
+
+演示：`docs/demo/demo.gif`（窗口三步）· `docs/demo/demo-clean-report.html` ·
+`docs/demo/demo-error-report.html`（单文件、0 外链）。
 
 ## 快速开始
 
@@ -63,7 +79,7 @@ src/auditor/          # 包源码
     types.py          # 类型定义
   llm/                # LLM 桥接（可插拔、默认关）
   report/             # 报告渲染
-  gui/                # GUI（PySide6）
+  gui/                # GUI：main_window（入口）/ window（窗口）/ pipelines（零 Qt 编排）
 tests/                # 测试
 data/                 # 数据（合成基准 + 真实论文元数据）
 tools/                # 构建/发布工具

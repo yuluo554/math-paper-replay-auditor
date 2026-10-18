@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<title>论文数学断言审计报告 · local:paper.tex</title>
+<style>
+body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;max-width:1080px;margin:2rem auto;padding:0 1rem;color:#1f2328}
+h1{font-size:1.35rem;border-bottom:1px solid #d0d7de;padding-bottom:.4rem}
+table{border-collapse:collapse;width:100%;margin-top:1rem}
+th,td{border:1px solid #d0d7de;padding:.35rem .55rem;font-size:.86rem;text-align:left}
+th{background:#f6f8fa}
+.ok{color:#1a7f37}.invalid{color:#cf222e}.undecidable{color:#9a6700}
+.summary div{display:inline-block;background:#f6f8fa;border-radius:6px;padding:.5rem .9rem;margin-right:1rem}
+.warn{background:#fff8c5;border:1px solid #d4a72c;padding:.6rem;border-radius:6px}
+.note{color:#57606a;font-size:.84rem;margin-top:1.5rem}
+</style></head><body>
+<h1>论文数学断言审计报告</h1>
+<p>local:paper.tex</p>
+<div class="summary">
+  <div><b>ok</b> 12</div><div><b>invalid</b> 0</div>
+  <div><b>undecidable</b> 0</div>
+  <div><b>解析覆盖</b> 100.0%</div>
+</div>
+
+<table><thead><tr><th>断言</th><th>类型</th><th>判定</th><th>归属错误类型</th><th>证据</th></tr></thead>
+<tbody>
+<tr><td>eq-001</td><td>equality</td><td class='ok'>ok</td><td>—</td><td>所有等式步骤验证通过</td></tr>
+<tr><td>eq-002</td><td>equality</td><td class='ok'>ok</td><td>—</td><td>所有等式步骤验证通过</td></tr>
+<tr><td>eq-003</td><td>equality</td><td class='ok'>ok</td><td>—</td><td>所有等式步骤验证通过</td></tr>
+<tr><td>thm-005</td><td>equality</td><td class='ok'>ok</td><td>—</td><td>所有等式步骤验证通过</td></tr>
+<tr><td>proof-009</td><td>equality</td><td class='ok'>ok</td><td>—</td><td>所有等式步骤验证通过</td></tr>
+<tr><td>num-001</td><td>table_value</td><td class='ok'>ok</td><td>—</td><td>f(0) 报告 1.0，独立复算 1.000000，偏差 0.00e+00 在容差 1e-04 内（容差口径：0.0001（唯一定义点：src/auditor/core/numerical_tolerance.py））</td></tr>
+<tr><td>num-002</td><td>table_value</td><td class='ok'>ok</td><td>—</td><td>f(1) 报告 2.718282，独立复算 2.718282，偏差 1.72e-07 在容差 1e-04 内（容差口径：0.0001（唯一定义点：src/auditor/core/numerical_tolerance.py））</td></tr>
+<tr><td>num-003</td><td>table_value</td><td class='ok'>ok</td><td>—</td><td>f(2) 报告 7.389056，独立复算 7.389056，偏差 9.89e-08 在容差 1e-04 内（容差口径：0.0001（唯一定义点：src/auditor/core/numerical_tolerance.py））</td></tr>
+<tr><td>dim-001</td><td>dimension</td><td class='ok'>ok</td><td>—</td><td>量纲声明与乘积律一致: [F] = [M][L][T]^{-2} （由 m \cdot a 推导得 [M][L][T]^{-2}）（注：量纲平衡不等于公式正确）</td></tr>
+<tr><td>graph-001</td><td>dependency</td><td class='ok'>ok</td><td>—</td><td>无悬空引用</td></tr>
+<tr><td>graph-002</td><td>dependency</td><td class='ok'>ok</td><td>—</td><td>无幽灵 label</td></tr>
+<tr><td>graph-003</td><td>dependency</td><td class='ok'>ok</td><td>—</td><td>无依赖断链</td></tr>
+</tbody></table>
+<p class="note">量纲平衡是必要非充分条件；幽灵 label 仅为结构性提示；
+本报告为提示性结论，不构成对论文正确性、作者或期刊的评判。</p>
+</body></html>
