@@ -77,6 +77,28 @@ python tools/make_release_zip.py --tag v0.1.1               # 6 个附件
 
 > 本节内容产生于 tag 之后，与 §一「tag 时点事实」分开记录（preflight ㉒）。
 
-- CI run：待回填
-- Release 附件清单与 digest：待回填
-- 真下载复核（中立目录 `auditor-cli.exe selftest` / `auditor.exe --selftest`）：待回填
+**Release 附件**（`gh release view v0.1.1 --json assets` 回读）：
+
+| 附件 | 大小 | sha256 |
+|---|---|---|
+| `auditor-v0.1.1-win64.zip` | 176,809,267 B | `74e77a0abe4b7d02e6106c124b5b33b8034b35482174c6b6855cc5eccd4df3c8` |
+| `auditor-v0.1.1-win64-sha256.txt` | 456 B | —（台账本身） |
+| `demo-clean-vs-error.gif` | 100,622 B | `84dffc4a45e09a45e6a0379ce525d23fe40b446ee2576cc1da5f763c277f8af2` |
+| `demo-clean-report.html` | 3,313 B | `a08399765f14f663e1a63d5e2349e95306ab5786e9ceec3870abd6b123c20048` |
+| `demo-error-report.html` | 3,335 B | `e41900f69206e59ee8c875e107e854f4f318365e8968cfda15a0aa615d30bdd8` |
+| `auditor-source-v0.1.1.zip` | 385,557 B | `4549455d8bea81dcb9058beebd0a948a7627561adaa578de34b7a9ee6858f52e` |
+
+**真下载复核**（`gh release download v0.1.1`，中立目录，`env -u PYTHONPATH -u PYTHONHOME`）：
+
+| 命令 | 结果 |
+|---|---|
+| 解压 `auditor-v0.1.1-win64.zip` | 含 `auditor/auditor-cli.exe` 与 `auditor/auditor.exe` |
+| `auditor-cli.exe selftest` | exit 0 |
+| `auditor.exe --selftest` | exit 0（审计 12 条断言 + 三格式导出） |
+| 下载件 sha256 vs 台账 | 逐位一致 |
+| demo HTML 外链扫描 | 两份均 **0 处** http/https |
+
+**已知形态差异**：zip 内为 onedir 双 exe（不是 onefile 单文件），
+与 plan/05 §5.2 的 `auditor-v<tag>-win64.zip`（"双 exe + 数据"）口径一致。
+
+**CI**：tag `v0.1.1` 推送触发（见 GitHub Actions）。
