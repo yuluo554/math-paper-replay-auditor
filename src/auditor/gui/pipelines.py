@@ -168,8 +168,10 @@ def export_report(outcome: AuditOutcome, output: Path, fmt: str = "markdown") ->
     else:
         raise ValueError(f"未知格式：{fmt}")
     output.parent.mkdir(parents=True, exist_ok=True)
-    # newline="\n"：Windows 上 write_text 默认把换行翻成 CRLF，会破坏 K55 字节冻结
-    output.write_text(text, encoding="utf-8", newline="\n")
+    # K55：显式 newline="\n" 防止 Windows 把换行翻成 CRLF。
+    # 注意 Path.write_text(newline=) 是 3.10+ 才有，3.8 矩阵必须用 open()。
+    with open(output, "w", encoding="utf-8", newline="\n") as fh:
+        fh.write(text)
     outcome.exported.append(str(output))
     return output
 
