@@ -86,7 +86,7 @@ python tools/make_release_zip.py --tag v0.1.1               # 6 个附件
 | `demo-clean-vs-error.gif` | 100,622 B | `84dffc4a45e09a45e6a0379ce525d23fe40b446ee2576cc1da5f763c277f8af2` |
 | `demo-clean-report.html` | 3,313 B | `a08399765f14f663e1a63d5e2349e95306ab5786e9ceec3870abd6b123c20048` |
 | `demo-error-report.html` | 3,335 B | `e41900f69206e59ee8c875e107e854f4f318365e8968cfda15a0aa615d30bdd8` |
-| `auditor-source-v0.1.1.zip` | 385,557 B | `4549455d8bea81dcb9058beebd0a948a7627561adaa578de34b7a9ee6858f52e` |
+| `auditor-source-v0.1.1.zip` | 386,252 B | `1c6ff6e72794c50c6c023d9899c23d74441ab253f92ef3a19dc0ff867eb77fcb` |
 
 **真下载复核**（`gh release download v0.1.1`，中立目录，`env -u PYTHONPATH -u PYTHONHOME`）：
 
@@ -98,7 +98,10 @@ python tools/make_release_zip.py --tag v0.1.1               # 6 个附件
 | 下载件 sha256 vs 台账 | 逐位一致 |
 | demo HTML 外链扫描 | 两份均 **0 处** http/https |
 
-**已知形态差异**：zip 内为 onedir 双 exe（不是 onefile 单文件），
-与 plan/05 §5.2 的 `auditor-v<tag>-win64.zip`（"双 exe + 数据"）口径一致。
+**zip 形态**：内含 `auditor/auditor-cli.exe` 与 `auditor/auditor.exe` 两个 onefile 可执行件
+（各自自带运行时与 `data/`），与 plan/05 §5.2 的"双 exe + 数据"口径一致。
 
-**CI**：tag `v0.1.1` 推送触发（见 GitHub Actions）。
+> 注：本轮发布做过一次重打 tag —— 首次 tag 指向的提交里 `Path.write_text(newline=)`
+> 在 Python 3.8 上不存在（CI 3.8 矩阵红）。修复后 tag 移到 CI 绿提交，附件重出。
+
+**CI**：tag `v0.1.1` 推送触发 run `39125841233`，**success**（windows 3.8 / 3.12 / ubuntu 3.12 三矩阵）。
