@@ -137,14 +137,60 @@ M5 声称"干净环境验证通过"，但当时 `plan/verify/` 目录为空、K4
 | NC3 | 把 K17 真门改成 `return`（no-op） | K31 必须变红 | ✅ **1 failed**（修复前是 4 passed 全绿） |
 | NC4 | 假 exe（`where.exe`）喂 `verify_package.py` | rc ≠ 0 | ✅ rc=1 |
 | NC5 | 装态删掉数据目录 | 友好错误 + 约定退出码 | ✅ selftest rc=1 / bench rc=2，均带指引 |
+| NC6 | `replay.py` 的 `Verdict.INVALID` → `Verdict.OK` | bench 检出率掉到 80% 且 exit 1 | ✅ rc=1，检出率 80.00% ✗ / illegal_derivation 0/3 / 总体: 未达标 ✗ |
 | NC7 | 干净论文 / 含错论文 | 0 / 1 | ✅ 0 / 1 |
+
+> **NC6 的头一次跑是假阴性**（改了源码却检出率仍 100%）：根因是一次**非 editable 安装**
+> 把 editable 安装遮蔽了，运行时加载的是 site-packages 里的旧副本。
+> 查 `import auditor.core.replay` 的 `__file__` 才发现。修好安装后重跑，NC6 立即按期望变红。
+> **"我改了源码"与"运行时加载的是我改的那份源码"是两件事。**
 
 ### 6.5 不可本机实跑的通路（显式标注）
 
-- **CI**：本轮改了 `.github/workflows/ci.yml`（actions 升 v7、矩阵去 3.8 腿），
-  **未推送即未跑**——推送后以 `gh run list` 的实际结论为准，本文件不预先写"CI 绿"。
-- **GUI 实机目检**：本机 venv 未装 PySide6（gui extra 未装），
-  只跑过 `--selftest` / `--bogus` / `--help`；窗口内交互仍需人眼点一遍。
-- **Linux / macOS 实机**：只有 Windows 产物；ubuntu 腿由 CI 覆盖。
+- **GUI 实机目检**：**用户已决定跳过**（2026-10-21）——本轮**未做**目检，
+  故 GUI 侧只算"零 Qt 的 `--selftest` 链路已验证"，**交互未经人眼确认**。
+  详见 `plan/RELEASE-M8.md` §5.7。
+- **Linux / macOS 实机**：只有 Windows 产物；ubuntu 腿由 CI 覆盖，macOS 无腿。
 
-> 依纪律：未推送 = 未跑 CI；未装 PySide6 = 未做 GUI 目检。两处都不写成"已验证"。
+> 依纪律：未做目检 = 未验证，不写成"已验证"。
+> （CI 的实际结论见 §六之二——本节写于推送前，结论以后续追加事实为准。）
+
+---
+
+## 六之二、M8 收尾追加事实（推送 / 发布之后）
+
+> 追加，不覆盖 §六的记录。
+
+### 6.2.1 CI 实际结论
+
+| 项 | 值 |
+|---|---|
+| run | **39576161482**（push @ 2026-10-21T09:20:17Z，headSha = `fde0506…`） |
+| 结论 | **success**（`windows-latest / py3.12` ✅、`ubuntu-latest / py3.12` ✅） |
+| 注解 | **Node20 弃用告警 0 条**（v0.1.1 时 3 条）；仅剩 GitHub 自己的 Ubuntu 26 迁移公告 |
+| 首版 run（红） | `39573968753` / `39573999392`（headSha `9da7013`）——被 CI 抓出两条真缺陷（见 `plan/RELEASE-M8.md` §5.2） |
+
+### 6.2.2 tag 树独立复验（fresh clone）
+
+| 检查 | 结果 |
+|---|---|
+| clone | ✅ `git clone --branch v0.1.2` → HEAD = `fde0506…` |
+| tag 树自带测试 | ✅ **309 passed**（另 3 项按设计略过），exit 0（3 个略过项全是 K52「冻结产物不存在」——clone 里无 `dist/`，属设计跳过） |
+| tag 树自带 `--check` | ✅ 20 个受控文件逐字节相同，rc=0 |
+| tag 树自带 `bench` | ✅ 检出率 100.00% / 总体: 通过 ✓ |
+| tag 树自带 `--version` | ✅ `auditor 0.1.2` |
+
+> 复验 venv：`%TEMP%\mpra-clone-venv`（**不复用**工作树的 `%TEMP%\mpra-verify`，
+> 也不复用仓库自带 `.cleanenv`）。
+
+### 6.2.3 发布物真下载复核（API 通道，6/6 实下）
+
+| 检查 | 结果 |
+|---|---|
+| 6 附件实下 | ✅ 字节数与 API 一致 |
+| sha256 三方对撞 | ✅ API digest = 本地实算 = 台账，**6/6 相同** |
+| `sha256sum -c` | ✅ **5/5 OK, RC=0**（D15 修 CRLF 之后才通） |
+| 源码包 vs tag 树 | ✅ 150 == 150 |
+| 中立目录双 exe | ✅ CLI selftest 0 / bench 0（100.00% / 0.00%）；GUI `--selftest` 0（ok=12 invalid=0） |
+| demo HTML 外链 | ✅ 0 处 |
+

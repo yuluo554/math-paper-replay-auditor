@@ -1,6 +1,6 @@
 # auditor — 数学论文可验证重放审计器
 
-**状态**：✅ v0.1.1 已发布（[Release](https://github.com/yuluo554/math-paper-replay-auditor/releases/tag/v0.1.1)）
+**状态**：✅ v0.1.2 已发布（[Release](https://github.com/yuluo554/math-paper-replay-auditor/releases/tag/v0.1.2)）
 
 > 首个面向 openPangu-2.0-Flash 的论文数学断言审计工具。审计核心零模型依赖、可离线复跑；模型接入为可插拔显式开关。
 
