@@ -37,13 +37,19 @@ def _sha256(path: Path) -> str:
 def test_ledger_generator_writes_lf_only():
     """K59: 台账生成器必须显式写 LF（不能依赖平台默认换行）。"""
     source = MAKE_ZIP.read_text(encoding="utf-8")
-    # 找写台账的那一段
-    assert "sha256.txt" in source, "未找到台账生成逻辑"
-    segment = source[source.index("sha256.txt"):][:1200]
+    # 定位"写台账"的那一段：从变量名 sums 往后看 800 字符。
+    # （不能用 "sha256.txt" 定位——它在文件头的产物清单里也出现，
+    #  会匹配到不相干的位置。）
+    idx = source.find('sums = args.out / f"auditor-{args.tag}-win64-sha256.txt"')
+    assert idx != -1, "未找到台账生成逻辑（sums = ...）"
+    segment = source[idx:idx + 800]
     assert 'newline=""' in segment, (
         "K59 违规: 写 sha256 台账时未显式 newline=\"\"——"
         "Windows 上 write_text() 会把 \\n 翻成 \\r\\n，"
         "导致 `sha256sum -c` 在 Linux 上逐条 FAILED open or read"
+    )
+    assert ".write_text(" not in segment, (
+        "K59 违规: 台账仍用 write_text() 写（Windows 上会翻成 CRLF）"
     )
 
 
