@@ -19,9 +19,20 @@ from auditor._encoding import ensure_utf8_stdio
 
 
 def _data_root() -> Path:
-    """数据根（冻结态取解包根，源码态取仓库根）。"""
+    """数据根（冻结态取解包根，源码态取仓库根，装态取 site-packages 根）。
+
+    D2：新增装态分支（pip 非 editable 安装后数据可达）。
+    冻结态的 `sys._MEIPASS` 分支**语义不变**（K52 依赖它）。
+    """
     if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
         return Path(sys._MEIPASS)
+
+    from auditor._datapaths import installed_data_root
+
+    installed = installed_data_root()
+    if installed is not None:
+        return installed
+
     # src/auditor/gui/main_window.py → parents[3] = 仓库根
     return Path(__file__).resolve().parents[3]
 

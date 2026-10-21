@@ -24,8 +24,8 @@ auditor.exe --selftest      # 零 Qt 自检：解析 → 四引擎 → 报告 �
 窗口：选择论文 `.tex` → 「开始审计」→ 左表逐条断言（ok/invalid/undecidable）→
 右栏人读报告 → 「导出报告（MD + JSON + HTML）」。
 
-演示：`docs/demo/demo.gif`（窗口三步）· `docs/demo/demo-clean-report.html` ·
-`docs/demo/demo-error-report.html`（单文件、0 外链）。
+演示：`docs/demo/demo.gif`（窗口三步）· `docs/demo/demo-clean.html` ·
+`docs/demo/demo-error.html`（单文件、0 外链）。
 
 ## 快速开始
 
@@ -66,6 +66,10 @@ python -m auditor bench --only numeric_mismatch
 
 > 非 0 退出码不等于"跑挂了"：`audit` 对含问题的论文返回 1 是**既定语义**。
 
+> **`fetch` 子命令当前未实现**：它会恒定返回 3（"抓取模块不可用"）——
+> arXiv 抓取是**尚未交付的扩展项**，不是可用功能。真实论文回归集同理
+> （`data/real_papers/registry.json` 目前只有一条占位记录）。
+
 ## 项目结构
 
 ```
@@ -81,9 +85,8 @@ src/auditor/          # 包源码
   report/             # 报告渲染
   gui/                # GUI：main_window（入口）/ window（窗口）/ pipelines（零 Qt 编排）
 tests/                # 测试
-data/                 # 数据（合成基准 + 真实论文元数据）
+data/                 # 数据（合成基准 + 真实论文元数据登记）
 tools/                # 构建/发布工具
-packaging/            # 打包辅助
 ```
 
 ## 评测指标
@@ -100,6 +103,10 @@ packaging/            # 打包辅助
 - **不随仓分发论文全文**：只存元数据与本地解析结果
 - **模型开关默认关闭**：审计核心零模型依赖
 - **LaTeX 解析覆盖度如实报告**：未覆盖清单不得静默丢弃
+- **「误报率 0」只覆盖合成基准**：来自 `data/benchmark/` 的 3 份合成干净样本；
+  **真实论文回归集尚未交付**（`data/real_papers/registry.json` 目前只有一条占位记录），
+  未在真实论文上验证过
+- **`fetch` 子命令未实现**：恒返回 3（arXiv 抓取是未交付的扩展项）
 
 ## 免责声明
 
@@ -109,7 +116,7 @@ packaging/            # 打包辅助
 
 - Windows 上 `py` 启动器会无视 venv，venv 段落一律用 `python -m pip ...`（激活后 `python` 才指向 venv）
 - PyInstaller 打包 GUI 必须 ≥6.22.3（5.x 确定性崩）
-- PySide6 在 3.8 上上限为 6.6.3.1
+- 最低 Python 版本为 **3.12**（3.8/3.10/3.11 已 EOL，本仓不再支持）
 
 ## License
 

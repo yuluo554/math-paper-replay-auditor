@@ -124,10 +124,17 @@ def _ensure_utf8_stdio() -> None:
 def _python_cmd() -> List[str]:
     """返回本机可用的 Python 解释器命令（argv 形式）。
 
-    本机 Windows 上 `python` 可能是商店占位符，故优先 py 启动器；
-    解析失败则回落到当前解释器 sys.executable。
+    优先用**当前解释器**（sys.executable）——它才是装了 PyInstaller / PySide6
+    的那个环境；只有当当前解释器里没有 PyInstaller 时，才回落到 py 启动器。
+
+    此前固定用 `py -3.12`（系统解释器），于是"在装了 build extra 的 venv 里
+    跑 build_exe"会去找一个**没有 PyInstaller** 的解释器 → 构建失败或产出用旧环境打的包。
     """
+    import importlib.util
     import shutil
+
+    if importlib.util.find_spec("PyInstaller") is not None:
+        return [sys.executable]
     if shutil.which("py"):
         return ["py", "-3.12"]
     return [sys.executable]

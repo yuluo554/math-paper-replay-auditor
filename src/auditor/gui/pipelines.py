@@ -109,6 +109,11 @@ def render_html(report: Dict[str, Any]) -> str:
     if degraded:
         degrade_block = "<p class='warn'><b>降级声明</b>：{}</p>".format(
             _html.escape(str(report.get("meta", {}).get("reason", ""))))
+    tool_version = report.get("meta", {}).get("tool_version")
+    version_block = (
+        "<p class='note'>工具版本：{}</p>".format(_html.escape(str(tool_version)))
+        if tool_version else ""
+    )
     return """<!DOCTYPE html>
 <html lang="zh-CN"><head><meta charset="utf-8">
 <title>论文数学断言审计报告 · {paper_id}</title>
@@ -125,6 +130,7 @@ th{{background:#f6f8fa}}
 </style></head><body>
 <h1>论文数学断言审计报告</h1>
 <p>{paper_id}</p>
+{version}
 <div class="summary">
   <div><b>ok</b> {ok}</div><div><b>invalid</b> {invalid}</div>
   <div><b>undecidable</b> {undecidable}</div>
@@ -140,6 +146,7 @@ th{{background:#f6f8fa}}
 </body></html>
 """.format(
         paper_id=_html.escape(str(report.get("paper_id", ""))),
+        version=version_block,
         ok=summary.get("ok", 0),
         invalid=summary.get("invalid", 0),
         undecidable=summary.get("undecidable", 0),
@@ -169,7 +176,8 @@ def export_report(outcome: AuditOutcome, output: Path, fmt: str = "markdown") ->
         raise ValueError(f"未知格式：{fmt}")
     output.parent.mkdir(parents=True, exist_ok=True)
     # K55：显式 newline="\n" 防止 Windows 把换行翻成 CRLF。
-    # 注意 Path.write_text(newline=) 是 3.10+ 才有，3.8 矩阵必须用 open()。
+    # 注意 Path.write_text(newline=) 是 3.10+ 才有；用 open() 对 3.10+ 同样正确，
+    # 且不引入版本相关的写法差异。
     with open(output, "w", encoding="utf-8", newline="\n") as fh:
         fh.write(text)
     outcome.exported.append(str(output))

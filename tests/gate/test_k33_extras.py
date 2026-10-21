@@ -18,6 +18,18 @@ REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 PYPROJECT_PATH = REPO_ROOT / "pyproject.toml"
 
 
+def _pyproject_version() -> str:
+    """读 pyproject.toml 的 [project].version（版本单一事实源）。"""
+    try:
+        import tomllib
+    except ImportError:
+        import tomli as tomllib
+
+    with open(PYPROJECT_PATH, "rb") as f:
+        data = tomllib.load(f)
+    return str(data["project"]["version"])
+
+
 def _parse_pyproject_extras() -> dict:
     """解析 pyproject.toml 的 extras。"""
     # tomllib 是 3.11+，3.8 用 tomli
@@ -93,7 +105,11 @@ def test_install_core_only_works():
     from auditor.core.replay import replay
     from auditor.core.numerical import recompute_numerical
 
-    assert auditor.__version__ == "0.1.0"
+    # D5: 版本不再写死字面量，改为与 pyproject.toml 的 version 比对
+    # （此前硬断言 "0.1.0"，把一个错误期望值钉进了门禁）
+    assert auditor.__version__ == _pyproject_version(), (
+        f"auditor.__version__={auditor.__version__!r} 与 pyproject.toml 的 version 不一致"
+    )
     assert parse is not None
     assert replay is not None
     assert recompute_numerical is not None

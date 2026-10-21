@@ -20,10 +20,15 @@ def parse_paper(input_path: str) -> PaperStructure:
 
 
 def _data_root() -> Path:
-    """数据根目录（冻结态取解包根，源码态取 CWD）。"""
-    if getattr(sys, "frozen", False):
-        return Path(sys._MEIPASS)
-    return Path(".")
+    """数据根目录（冻结态取解包根，源码态取 CWD，装态取 site-packages 根）。
+
+    D2：原先只有冻结态与源码态两个分支，pip 非 editable 安装后无数据可用
+    （selftest exit 1 / bench exit 2）。现在经 `_datapaths.resolve_data_root()`
+    统一解析，**冻结态的 `sys._MEIPASS` 分支语义不变**（K52 依赖它）。
+    """
+    from auditor._datapaths import resolve_data_root
+
+    return resolve_data_root()
 
 
 def resolve_input_path(input_path: str) -> str:
@@ -125,11 +130,21 @@ def run_benchmark(only: Optional[List[str]] = None, verbose: bool = False) -> in
 
 
 def fetch_arxiv(arxiv_id: str) -> int:
-    """从 arXiv 获取论文。退出码：0=成功, 2=用法错误, 3=缺依赖。"""
+    """从 arXiv 获取论文。退出码：0=成功, 2=用法错误, 3=缺依赖。
+
+    D8：本功能**尚未交付**（`src/auditor/fetch/` 不存在）。
+    此处原先把"模块不存在"与"用户没开联网"压成同一句话
+    "抓取模块不可用（需联网开关）"——后者会误导用户以为"开个开关就能用"。
+    现在如实说明：这是未实现的扩展项。
+    """
     try:
         from auditor.fetch.arxiv import fetch
     except ImportError:
-        print("错误: 抓取模块不可用（需联网开关）", file=sys.stderr)
+        print(
+            "错误: fetch 子命令未实现——arXiv 抓取是尚未交付的扩展项"
+            "（本仓当前只支持本地 .tex 文件的审计；README「退出码语义」一节已注明）。",
+            file=sys.stderr,
+        )
         return 3
     return fetch(arxiv_id)
 
@@ -146,7 +161,10 @@ def selftest() -> bool:
     truth = root / "data" / "benchmark" / "truth.json"
     manifest = root / "data" / "benchmark" / "manifest.json"
     if not truth.exists() or not manifest.exists():
+        from auditor._datapaths import data_unreachable_hint
+
         print(f"自检失败: 内嵌数据不可达（{truth}）", file=sys.stderr)
+        print(f"提示: {data_unreachable_hint()}", file=sys.stderr)
         return False
 
     # 2. 核心引擎可 import 且可跑

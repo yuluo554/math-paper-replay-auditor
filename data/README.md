@@ -52,6 +52,11 @@
    - 假作者：`A. Example` / `B. Sample` / `Test Author`；假机构：`Example University` / `样例大学`
    - 假期刊：`Journal of Sample Results`（明确标注为合成）
 5. **真实论文回归集**：只登记 **arXiv id + 版本 + 本地解析产物 sha256**，**不随仓存全文**；正样本限"有公开勘误/撤回说明"的论文（勘误说明作为外部真值引用来源，标 ⬜ 待核对具体条目），负样本为干净论文（用于"不误报"验证）。
+   > **⚠️ 当前交付状态（2026-10-21 实测）**：本目录 `data/real_papers/registry.json` 里
+   > **只有一条占位记录**（`paper_id = "arXiv:XXXX.XXXXX"`、`local_parse_sha256 = null`），
+   > **真实论文回归集是扩展项、尚未交付**。
+   > 因此本仓的"误报率 0"只来自 `data/benchmark/` 里的 **3 份合成干净样本**，
+   > **不代表在真实论文上验证过**。
 6. **预置模型输出快照**：含模型名、版本、生成参数、原始输出、sha256；随仓只存快照与真值台账。
 7. **只增不改**：`data/snapshots/**` 入仓后标 `.gitattributes` `-text` 防 EOL 改写字节。
 

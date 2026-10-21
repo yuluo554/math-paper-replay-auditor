@@ -7,6 +7,7 @@ import argparse
 from typing import Optional
 
 from auditor._encoding import ensure_utf8_stdio
+from auditor import __version__
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -14,6 +15,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="auditor",
         description="数学论文可验证重放审计器",
+    )
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"%(prog)s {__version__}",
+        help="打印工具版本并退出",
     )
     subparsers = parser.add_subparsers(dest="command", help="可用命令")
 

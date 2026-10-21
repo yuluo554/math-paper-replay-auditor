@@ -35,6 +35,11 @@ def render_markdown(result: Dict[str, Any]) -> str:
     lines.append(f"# 审计报告：{result.get('paper_id', 'unknown')}")
     lines.append("")
 
+    tool_version = result.get("meta", {}).get("tool_version")
+    if tool_version:
+        lines.append(f"> 工具版本：{tool_version}")
+        lines.append("")
+
     summary = result.get("summary", {})
     lines.append("## 判定汇总")
     lines.append("")
@@ -138,5 +143,17 @@ def build_report(
         "claims": dict_claims,
         "summary": summary,
         "coverage_report": coverage,
-        "meta": meta or {},
+        "meta": _with_tool_version(meta or {}),
     }
+
+
+def _with_tool_version(meta: Dict[str, Any]) -> Dict[str, Any]:
+    """在 meta 里补上工具版本（D5）。
+
+    **不加生成时间**——报告必须"同输入同输出"（逐字节可复现）。
+    """
+    from auditor import __version__
+
+    enriched = dict(meta)
+    enriched.setdefault("tool_version", __version__)
+    return enriched

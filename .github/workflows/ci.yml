@@ -16,17 +16,18 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: windows-latest
-            python: "3.8"
+          # DEC1=B：最低 Python 抬到 3.12（3.8/3.10/3.11 均已 EOL）。
+          # 3.8 腿随之下线（此前它还拖着 gui 的 PySide6<6.7 与 build 的 setuptools<81
+          # 两条连带上限，本轮已一并删除）。
           - os: windows-latest
             python: "3.12"
           - os: ubuntu-latest
             python: "3.12"
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python }}
 

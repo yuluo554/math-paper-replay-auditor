@@ -77,6 +77,36 @@ def test_readme_auditor_commands_reference_existing_paths():
     )
 
 
+def test_readme_quoted_relative_paths_exist():
+    """K47: README 里反引号包住的**仓库相对路径**必须真实存在。
+
+    D6：此前 K47 只校验 `--input/--output` 形态的路径，
+    于是 README 里 `docs/demo/demo-clean-report.html` 这种
+    "反引号包住的相对路径"指向不存在的文件（仓内实际是 `demo-clean.html`），
+    全程无人发现——点进去是 404。
+    """
+    text = _readme_text()
+    missing = []
+    seen = set()
+
+    # 反引号里形如 path/with/slash 或 path.ext 的相对路径
+    for m in re.finditer(r"`([A-Za-z0-9_.\-/]+\.[A-Za-z0-9]+|[A-Za-z0-9_\-]+/[A-Za-z0-9_.\-/]+)`", text):
+        raw = m.group(1)
+        if raw in seen:
+            continue
+        seen.add(raw)
+        # 跳过命令片段、URL、纯标识符
+        if raw.startswith(("http", "www.")) or " " in raw:
+            continue
+        candidate = REPO_ROOT / raw
+        if not candidate.exists():
+            missing.append(raw)
+
+    assert not missing, (
+        "K47 违规: README 引用的相对路径不存在:\n" + "\n".join(missing)
+    )
+
+
 def test_readme_quoted_module_invocations_are_importable():
     """K47: README 里 `python -m <mod>` 的模块必须真的可执行（含 __main__）。"""
     text = _readme_text()

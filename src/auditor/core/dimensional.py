@@ -175,6 +175,14 @@ def _parse_unit(unit_str: str) -> Optional[DimensionVector]:
         return COMMON_DIMENSIONS[unit_str]
 
     # 单位映射
+    # 注意："n" 只保留一个含义 = force（牛顿）。此前此处有两处 "n"
+    # （先 "amount" 后 "force"），后写者覆盖前者——pyflakes 直接报
+    # "dictionary key 'n' repeated with different values"（D10）。
+    # 取舍依据：
+    #   1) 物质的量的单位符号是 mol（已在表内映射到 amount），
+    #      单独把小写 n 映射到 amount 会让 "N"（牛顿）永远拿不到 force；
+    #   2) 现有行为（大写 N 经 lower() → n → force）已被测试固化，
+    #      保留 force 即保持行为逐字节不变（删掉的是被覆盖的死条目）。
     unit_map = {
         "m": "length",
         "kg": "mass",
@@ -183,7 +191,6 @@ def _parse_unit(unit_str: str) -> Optional[DimensionVector]:
         "k": "temperature",
         "mol": "amount",
         "cd": "luminous",
-        "n": "amount",
         "hz": "frequency",
         "n": "force",  # 牛顿
         "j": "energy",

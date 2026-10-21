@@ -170,6 +170,56 @@ class TestUnitParsing:
         assert dim.l == 1
         assert dim.t == -1
 
+    def test_parse_n_is_force_not_amount(self):
+        """D10: "n" 的量纲只能是 force，不能与 amount 混。
+
+        此前 unit_map 里 "n" 出现两次（先 amount 后 force），后写者覆盖前者，
+        pyflakes 报 "dictionary key 'n' repeated with different values"。
+        取舍：物质的量的单位是 mol（小写 n 单独留给物质的量会让
+        "N"（牛顿）永远拿不到 force）——本测试把这个取舍钉死。
+        """
+        newton = _parse_unit("N")
+        assert newton is not None, "N（牛顿）必须能解析"
+        assert newton.m == 1 and newton.l == 1 and newton.t == -2, (
+            f"N（牛顿）应解析为 force，实际为 {newton}"
+        )
+        assert newton.n == 0, "force 的量纲里不含物质的量分量 n"
+
+        mol = _parse_unit("mol")
+        assert mol is not None, "mol（物质的量）必须能解析"
+        assert mol.n == 1, f"mol 应解析为 amount（n=1），实际为 {mol}"
+        assert mol.m == 0 and mol.l == 0 and mol.t == 0, (
+            f"mol 的量纲不应含质量/长度/时间分量，实际为 {mol}"
+        )
+
+        # N 与 mol 的语义不得互相污染
+        assert newton != mol
+
+    def test_unit_map_has_no_duplicate_keys(self):
+        """D10: 单位映射表不得有重复键（静态口径，与 pyflakes 同源）。"""
+        import ast
+        import inspect
+
+        from auditor.core import dimensional
+
+        source = inspect.getsource(dimensional._parse_unit)
+        tree = ast.parse(source.strip())
+
+        unit_map_node = None
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Assign) and any(
+                isinstance(t, ast.Name) and t.id == "unit_map" for t in node.targets
+            ):
+                unit_map_node = node.value
+                break
+        assert unit_map_node is not None, "未找到 unit_map 字面量"
+
+        seen = set()
+        for key_node in unit_map_node.keys:
+            key = key_node.value
+            assert key not in seen, f"unit_map 里有重复键: {key!r}"
+            seen.add(key)
+
 
 class TestDimensionBalance:
     """量纲平衡测试。"""

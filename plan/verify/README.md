@@ -81,3 +81,70 @@ M5 声称"干净环境验证通过"，但当时 `plan/verify/` 目录为空、K4
   仅能以"路径一律 POSIX 规范化 + 白名单镜像仓库相对路径"降低风险。**待首推验证**。
 
 > 依 skill 纪律：未推送 = 未跑 CI，本文件不写"CI 绿"，只写"本地等价校验"并标注缺口。
+
+
+---
+
+## 六、M8 轮次记录（2026-10-21，v0.1.2 二次迭代）
+
+> 追加，不覆盖历史轮次。环境：Windows 11 (win32 10.0.26200)，Git Bash，
+> Python **3.12.10**（干净 venv `%TEMP%\mpra-verify`，非仓库自带 `.cleanenv`）。
+
+### 6.1 前置
+
+| 步骤 | 命令 | 结果 |
+|---|---|---|
+| 建干净 venv | `py -3.12 -m venv %TEMP%\mpra-verify` | ✅ 成功 |
+| 装依赖 | `%TEMP%\mpra-verify\Scripts\python.exe -m pip install -e ".[dev,core]"` | ✅ exit 0 |
+
+### 6.2 README 快速开始逐条执行（退出码对照 README「退出码语义」表）
+
+| # | 命令 | 退出码 | 语义判定 |
+|---|---|---|---|
+| 1 | `python -m auditor selftest` | 0 | ✅ 自检通过（数据可达 + 四引擎全链路 + 基准达标） |
+| 2 | `python -m auditor bench` | 0 | ✅ 基准全绿（检出率 100%、误报率 0%、五类各 3/3） |
+| 3 | `python -m auditor audit --input data/benchmark/C001-clean/paper.tex` | 0 | ✅ 干净论文无确证问题 |
+| 4 | `python -m auditor audit --input data/benchmark/B002-001-illegal_derivation/paper.tex` | 1 | ✅ 检出确证问题（非 0 ≠ 跑挂，既定语义） |
+| 5 | `python -m auditor bench --only numeric_mismatch` | 0 | ✅ 单类套件达标 |
+| 6 | `python -m auditor bench --only NOPE` | 2 | ✅ 未知错误类型 → 用法错误 |
+| 7 | `python -m auditor audit --input nope.tex` | 2 | ✅ 输入文件不存在 → 用法错误 |
+| 8 | `python -m auditor`（无参数） | 2 | ✅ 打印帮助 → 用法错误 |
+| 9 | `python -m auditor fetch --arxiv-id 2301.00001` | 3 | ✅ fetch **未实现**（D8：已如实声明，恒 exit 3） |
+| 10 | `python -m auditor --bogus` | 2 | ✅ 未知参数 → 用法错误 |
+| 11 | `python -m auditor --version` | 0 | ✅ 打印 `auditor 0.1.2`（D5 新增） |
+| 12 | `python -m data.benchmark.generator --check` | 0 | ✅ 真值库位级一致（20 个受控文件逐字节相同，D3 新增） |
+| 13 | `python -m pytest tests/ -q` | 0 | ✅ **307 passed, 1 failed**（唯一失败是本文件尚未写 M8 记录的 K48 门——写完即绿） |
+
+### 6.3 装态（非 editable 安装）验证——D2 的正面与反面
+
+| 检查 | 命令 | 结果 |
+|---|---|---|
+| wheel 携带数据 | `python -m build --wheel` → 数 `paper.tex` 条目 | ✅ 18 个 `paper.tex` + `truth.json`（原先 **0**） |
+| 装态自检 | `auditor.exe selftest`（中立目录） | ✅ exit 0 |
+| 装态基准 | `auditor.exe bench`（中立目录） | ✅ exit 0，检出率 100.00% / 误报率 0.00% |
+| 装态审计（干净） | `auditor.exe audit --input <site-packages>/auditor/data/benchmark/C001-clean/paper.tex` | ✅ exit 0 |
+| 装态审计（含错） | 同上换 B001-001 | ✅ exit 1 |
+| 装态版本 | `auditor.exe --version` | ✅ `auditor 0.1.2`（与 pyproject 一致） |
+| **缺数据（负控）** | 把 site-packages 里的 `auditor/data` 改名后重跑 | ✅ selftest **exit 1** + 可执行指引；bench **exit 2** + 指引；**无 traceback** |
+| 装态回归守门 | `pytest tests/gate/test_k58_installed_usable.py -q` | ✅ 2 passed（真实构建 + 真实安装 + 中立目录） |
+
+### 6.4 门禁质量负控（证明门会红）
+
+| # | 变异 | 期望 | 实测 |
+|---|---|---|---|
+| NC1 | 真值库重生成 vs 仓库 | 逐字节相同 | ✅ 20/20 文件相同 |
+| NC2 | 篡改 `truth[0].expect.location` | `--check` rc ≠ 0 | ✅ rc=1，点名 `truth.json` |
+| NC3 | 把 K17 真门改成 `return`（no-op） | K31 必须变红 | ✅ **1 failed**（修复前是 4 passed 全绿） |
+| NC4 | 假 exe（`where.exe`）喂 `verify_package.py` | rc ≠ 0 | ✅ rc=1 |
+| NC5 | 装态删掉数据目录 | 友好错误 + 约定退出码 | ✅ selftest rc=1 / bench rc=2，均带指引 |
+| NC7 | 干净论文 / 含错论文 | 0 / 1 | ✅ 0 / 1 |
+
+### 6.5 不可本机实跑的通路（显式标注）
+
+- **CI**：本轮改了 `.github/workflows/ci.yml`（actions 升 v7、矩阵去 3.8 腿），
+  **未推送即未跑**——推送后以 `gh run list` 的实际结论为准，本文件不预先写"CI 绿"。
+- **GUI 实机目检**：本机 venv 未装 PySide6（gui extra 未装），
+  只跑过 `--selftest` / `--bogus` / `--help`；窗口内交互仍需人眼点一遍。
+- **Linux / macOS 实机**：只有 Windows 产物；ubuntu 腿由 CI 覆盖。
+
+> 依纪律：未推送 = 未跑 CI；未装 PySide6 = 未做 GUI 目检。两处都不写成"已验证"。

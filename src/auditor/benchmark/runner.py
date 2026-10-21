@@ -40,15 +40,19 @@ class BenchmarkResult:
 
 
 def _get_root() -> Path:
-    """获取仓库相对路径的挂载根（冻结态/源码态一致语义）。
+    """获取仓库相对路径的挂载根（冻结态/源码态/装态一致语义）。
 
     冻结态：数据解包到 sys._MEIPASS，白名单 target 镜像仓库相对路径，
             故 <root>/data/... 在两种模式下结构完全一致。
     源码态：<root> = 当前工作目录（须为仓库根，见 README 命令）。
+    装态：<root> = site-packages 根（data 包随 wheel 安装，见 `_datapaths`）。
+
+    D2：原先只有冻结态与源码态两个分支，pip 安装后真值库不可达。
+    冻结态的 `sys._MEIPASS` 分支**语义不变**（K52 依赖它）。
     """
-    if getattr(sys, "frozen", False):
-        return Path(sys._MEIPASS)
-    return Path(".")
+    from auditor._datapaths import resolve_data_root
+
+    return resolve_data_root()
 
 
 def _resolve_repo_path(rel_path: str) -> Path:
@@ -81,7 +85,11 @@ def load_truth(benchmark_dir: str = "data/benchmark") -> List[Dict[str, Any]]:
     """
     truth_path = _resolve_repo_path(f"{benchmark_dir}/truth.json")
     if not truth_path.exists():
-        raise FileNotFoundError(f"真值库不存在: {truth_path}")
+        from auditor._datapaths import data_unreachable_hint
+
+        raise FileNotFoundError(
+            f"真值库不存在: {truth_path}\n提示: {data_unreachable_hint()}"
+        )
 
     with open(truth_path, "r", encoding="utf-8") as f:
         return json.load(f)

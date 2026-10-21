@@ -9,6 +9,7 @@ skill 要求"字节冻结分层设防"：
 
 from __future__ import annotations
 
+import ast
 import zipfile
 from pathlib import Path
 
@@ -27,6 +28,9 @@ SKIP_PARTS = {
     "__pycache__", ".pytest_cache", ".eggs", "node_modules",
     # 发布产物目录（由 tools/make_release_zip.py 生成；源件在 docs/demo/ 下受本守门覆盖）
     "release",
+    # 过程文档目录（迭代诊断交接物；与 K46 的排除名单保持同一口径，
+    # 见 plan/RELEASE-M8.md）
+    "update",
 }
 
 
@@ -74,11 +78,44 @@ def test_k55_generated_data_is_lf():
     )
 
 
+def _is_zip_writer(text: str) -> bool:
+    """判断该文件是否**写** zip（只读 zip 不影响打包确定性）。
+
+    原判据是"文件里出现 zipfile.ZipFile 就算写 zip"——这会误伤
+    "只读取 wheel 内容做校验"的代码（如 tests/gate/test_k58_installed_usable.py：
+    它 `zipfile.ZipFile(wheel).namelist()` 只读，不产生任何字节）。
+    这里改为按调用形态判定：只有**以写模式**打开 ZipFile 才算 zip writer。
+    """
+    try:
+        tree = ast.parse(text)
+    except SyntaxError:
+        return False
+
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        func = node.func
+        if not (isinstance(func, ast.Attribute) and func.attr == "ZipFile"):
+            continue
+        # 位置参数第 2 个是 mode；关键字参数 mode= 亦可
+        mode = None
+        if len(node.args) >= 2 and isinstance(node.args[1], ast.Constant):
+            mode = node.args[1].value
+        for kw in node.keywords:
+            if kw.arg == "mode" and isinstance(kw.value, ast.Constant):
+                mode = kw.value.value
+        if mode in ("w", "a", "x"):
+            return True
+    return False
+
+
 def test_k55_zip_helpers_use_stored_and_fixed_mtime():
-    """K55: 若仓库内使用 zipfile，必须 ZIP_STORED + 固定 date_time。
+    """K55: 若仓库内**写** zip，必须 ZIP_STORED + 固定 date_time。
 
     防"打包确定性"落空：ZIP_DEFLATED 的压缩流与当前时间都会让
     同一个输入打出不同字节。
+
+    只读 zip（校验 wheel 内容）不受此约束——它不产生任何字节。
     """
     offenders = []
     for p in REPO_ROOT.rglob("*.py"):
@@ -86,6 +123,8 @@ def test_k55_zip_helpers_use_stored_and_fixed_mtime():
             continue
         text = p.read_text(encoding="utf-8", errors="replace")
         if "zipfile.ZipFile" not in text and "ZipFile(" not in text:
+            continue
+        if not _is_zip_writer(text):
             continue
         if "ZIP_STORED" not in text:
             offenders.append(f"{p.relative_to(REPO_ROOT)}: 未用 ZIP_STORED")

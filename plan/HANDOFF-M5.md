@@ -299,7 +299,7 @@
 - [x] 生成器可复跑（固定 seed，两次运行逐字节一致）
 - [x] 真值库只存输入+期望，无 observed 字段（K17）
 - [x] 覆盖度口径落 manifest（五类错误各 ≥3 样本 + 3 篇干净论文）
-- [x] 生成器 `--check` 位级一致守门测试（K20）
+- [x] 生成器 `--check` 位级一致守门测试（K20） ← **2026-10-21 更正**：此处勾选当时为空转（仓内无 `--check` 实现，手改 `truth.json` 的 `expect.location`/`generator_seed` 无门可发现）；本轮已补齐真实实现与门，见 `plan/RELEASE-M8.md` 与 `tests/gate/test_k20_regen_parity.py`
 - [x] 确定性 RNG（splitmix64）落盘
 - [x] 假数据白名单（whitelist.json）落盘（K36）
 - [x] 真实论文回归集 registry.json 骨架

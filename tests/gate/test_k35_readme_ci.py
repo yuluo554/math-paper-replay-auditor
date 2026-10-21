@@ -81,15 +81,59 @@ def test_ci_workflow_exists():
     )
 
 
-def test_ci_covers_both_interpreters():
-    """K35: CI 矩阵必须覆盖 3.8 与 3.12（双解释器纪律不能只在本机做）。"""
+def _declared_floor() -> str:
+    """读 pyproject.toml 声明的最低 Python 版本（requires-python）。"""
+    try:
+        import tomllib
+    except ImportError:
+        import tomli as tomllib
+
+    with open(REPO_ROOT / "pyproject.toml", "rb") as f:
+        data = tomllib.load(f)
+    spec = data["project"]["requires-python"]
+    # 形如 ">=3.12"
+    return spec.replace(">=", "").strip()
+
+
+def test_ci_covers_declared_floor():
+    """K35: CI 矩阵必须覆盖**声明的最低 Python 版本**与当前主版本。
+
+    D11/DEC1=B：此前本门硬断言 `"3.8" in ci.yml`，
+    floor 抬到 3.12 后它会变红——但那不是"CI 配置错了"，
+    而是"门禁写死了旧口径"。现在改为跟随 pyproject 的 requires-python：
+    门禁仍要求「最低版本必须在矩阵里」（这才是它的本意），
+    但不再写死某个具体版本号。
+    """
     ci = REPO_ROOT / ".github" / "workflows" / "ci.yml"
     if not ci.exists():
         ci = REPO_ROOT / ".github" / "workflows" / "ci.yaml"
     content = ci.read_text(encoding="utf-8")
 
-    assert '"3.8"' in content or "'3.8'" in content, "K35: CI 矩阵缺 3.8"
+    floor = _declared_floor()
+    assert f'"{floor}"' in content or f"'{floor}'" in content, (
+        f"K35: CI 矩阵缺声明的最低版本 {floor}（requires-python）"
+    )
     assert '"3.12"' in content or "'3.12'" in content, "K35: CI 矩阵缺 3.12"
+
+
+def test_ci_does_not_test_eol_interpreters():
+    """K35: CI 矩阵不得再测已 EOL 的 Python 版本（3.8/3.10/3.11）。
+
+    与上一条互为对照：上一条要求"floor 必须在矩阵里"，
+    这一条要求"矩阵里不得有比 floor 更老的版本"。
+    """
+    ci = REPO_ROOT / ".github" / "workflows" / "ci.yml"
+    if not ci.exists():
+        ci = REPO_ROOT / ".github" / "workflows" / "ci.yaml"
+    content = ci.read_text(encoding="utf-8")
+
+    floor = _declared_floor()
+    for eol in ("3.8", "3.9", "3.10", "3.11"):
+        if eol == floor:
+            continue
+        assert f'python: "{eol}"' not in content, (
+            f"K35 违规: CI 矩阵仍测已 EOL 的 Python {eol}（floor={floor}）"
+        )
 
 
 def test_ci_sets_utf8_env():
