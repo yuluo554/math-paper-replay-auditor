@@ -108,7 +108,11 @@ def main(argv=None) -> int:
     for path in sorted(args.out.glob("*")):
         if path.is_file() and path.name != sums.name:
             entries.append(f"{_sha256(path)}  {path.name}")
-    sums.write_text("\n".join(entries) + "\n", encoding="utf-8")
+    # 行尾必须 LF：`sha256sum -c`（Linux/Git Bash）会把 CR 当成文件名的一部分
+    # → "FAILED open or read"（v0.1.1 的台账就是 CRLF，Linux 上校验直接失败）。
+    # write_text() 在 Windows 上默认把 \n 翻成 \r\n，故显式 newline=""。
+    with open(sums, "w", encoding="utf-8", newline="") as fh:
+        fh.write(("\n".join(entries) + "\n").replace("\r\n", "\n"))
     print(f"✅ {sums.name}")
 
     print(json.dumps(sorted(p.name for p in args.out.glob("*")),

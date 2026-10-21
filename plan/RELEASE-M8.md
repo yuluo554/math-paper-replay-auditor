@@ -39,7 +39,7 @@
 
 | # | 缺陷 | 现象 | 处置 | 守门 |
 |---|---|---|---|---|
-| **D3** | **K20「生成器 `--check` 位级一致」从未实现** | 仓内**无** `--check`；`plan/00` 与 `HANDOFF-M2..M5` 五处都勾了它。实测：手改 `truth[0].expect.location` 与 `truth[1].generator_seed` → `288 passed, 3 skipped, EXIT=0`（**无门发现**） | `data/benchmark/generator/__init__.py` 新增**只读** `check_benchmark()`（重生成到临时目录 → 逐字节比对，**绝不写 `data/`**）+ `__main__.py` 入口 | **K20 新增 5 项**（正控 / 两类篡改负控 / CLI 形态 / 只读反控） |
+| **D3** | **K20「生成器 `--check` 位级一致」从未实现** | 仓内**无** `--check`；`plan/00` 与 `HANDOFF-M2..M5` 五处都勾了它。实测：手改 `truth[0].expect.location` 与 `truth[1].generator_seed` → `288 passed`（另 3 项按设计略过）、`EXIT=0`（**无门发现**） | `data/benchmark/generator/__init__.py` 新增**只读** `check_benchmark()`（重生成到临时目录 → 逐字节比对，**绝不写 `data/`**）+ `__main__.py` 入口 | **K20 新增 5 项**（正控 / 两类篡改负控 / CLI 形态 / 只读反控） |
 | **D2** | **pip 装完不可用** | wheel 30 条目、`data/` 命中 **0**；装态 `selftest` exit 1、`bench` exit 2 | 数据装成 **`auditor.data`** 子包（不装顶层 `data`，避免 site-packages 撞名）；新增 `src/auditor/_datapaths.py` 统一三形态定位；**三处 `sys._MEIPASS` 分支语义不变** | **K58 新增 2 项**（真实构建 → 装干净 venv → 中立目录跑 selftest/bench/audit） |
 | **D1** | **`verify_package.py` 在任何 exe 上都抛异常** | 期望 exe 写 `selftest_out.txt`，真实 exe 既不接受多余裸参数也不写文件 → `FileNotFoundError` exit 1 | 改为真契约：跑 `selftest` + `bench`，断言 rc 与关键输出，**在中立目录**执行 | NC4 负控：假 exe → rc=1 |
 | **D5** | **版本双源且被测试写死** | pyproject `0.1.1` vs `__version__` `0.1.0`；`test_k33_extras.py:96` 硬断言 `"0.1.0"` | 版本改从 `importlib.metadata` 读（单源）；`--version` 补上；报告三格式补工具版本（**不加生成时间**，保持同输入同输出） | K33 改为与 pyproject 比对 |

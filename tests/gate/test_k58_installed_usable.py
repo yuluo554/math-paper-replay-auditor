@@ -112,11 +112,23 @@ def _install_and_run(wheel: Path, workdir: Path):
     selftest = run(["selftest"])
     bench = run(["bench"])
 
-    # audit 用**装出来的数据里的样本**，绝对路径（与 CWD 无关）
-    site = Path(python).parent.parent / "Lib" / "site-packages"
-    sample = site / "auditor" / "data" / "benchmark" / "C001-clean" / "paper.tex"
-    if not sample.exists():  # pragma: no cover - 非 Windows 布局
-        sample = site / "auditor" / "data" / "benchmark" / "C001-clean" / "paper.tex"
+    # audit 用**装出来的数据里的样本**，绝对路径（与 CWD 无关）。
+    # site-packages 的位置**必须问解释器本身**，不能按 Windows 布局硬拼
+    # （`Scripts/../Lib/site-packages`）——Linux 上是 `lib/python3.12/site-packages`
+    # （CI 首跑时正是栽在这里：装态 audit 退出码 2，样本路径不存在）。
+    locate = subprocess.run(
+        [str(python), "-c",
+         "import auditor.data, pathlib; print(pathlib.Path(auditor.data.__file__).parent)"],
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+    assert locate.returncode == 0, (
+        f"装态下无法定位 auditor.data 包:\n{locate.stdout}\n{locate.stderr}"
+    )
+    data_dir = Path(locate.stdout.strip())
+    sample = data_dir / "benchmark" / "C001-clean" / "paper.tex"
+    assert sample.is_file(), f"装态下找不到样本文件: {sample}"
     audit = run(["audit", "--input", str(sample)])
 
     return selftest, bench, audit
