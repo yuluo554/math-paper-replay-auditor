@@ -115,11 +115,86 @@ auditor bench                                             # exit 0（100% / 0%�
 
 > 以下事实产生于 tag 与 Release 之后，是**追加**内容，不改写上面的 tag 时点事实。
 
+### 5.1 tag 与提交
+
 | 项 | 值 |
 |---|---|
-| tag | `v0.1.2`（annotated） |
-| 指向提交 | 见 §五.2 |
-| CI run | 见 §五.3 |
-| Release | `v0.1.2`（6 个附件） |
-| 附件 sha256 | 见 §五.4 |
-| 真下载复核 | 见 §五.5 |
+| tag | `v0.1.2`（annotated），tag 对象 `c218bfa`→ 重指到绿提交 |
+| 指向提交 | `fde050691d77267d9fced8d0dfc979e0ea996f79`（**CI 绿的那一个**） |
+| 提交区间 | `v0.1.1..v0.1.2` = **4 个提交**（`9da7013` 主改动 / `dd39359` 修 CI 两处红 / `fde0506` 修 K59 门自身匹配过宽 / `2e8b74a` M7 留档） |
+| tag 树 | 150 个文件（源码包内 150 个文件，一一对应） |
+| 远端 | `ssh://git@ssh.github.com:443/yuluo554/math-paper-replay-auditor.git` |
+
+> **tag 曾经挪过一次**：首版 tag 打在 `9da7013`，而该提交的 CI 两腿都红
+> （见 §五.3 的两条真实缺陷）。修完后**删 tag、重打、重推**，
+> 指向 `fde0506`（CI 绿）。`v0.1.0` / `v0.1.1` 未动。
+
+### 5.2 CI
+
+| 项 | 值 |
+|---|---|
+| run | **39576161482**（`push` @ 2026-10-21T09:20:17Z，headSha = `fde0506…`） |
+| 结论 | **success** |
+| job | `windows-latest / py3.12` **success**；`ubuntu-latest / py3.12` **success**（3.8 腿已随 DEC1 下线） |
+| 注解 | **Node20 弃用告警 0 条**（v0.1.1 时为 3 条）；仅剩 GitHub 自己的 "ubuntu-latest 将迁移 Ubuntu 26" 公告（非本仓告警） |
+
+**首版 CI（run 39573968753 / 39573999392，headSha `9da7013`）的两条真实缺陷**——
+它们是被 CI 抓出来的，不是本地能发现的：
+
+| # | 缺陷 | 现象 | 处置 |
+|---|---|---|---|
+| **D16** | `plan/RELEASE-M8.md` 含第四态词面 | K4「文档中不得出现第四态词面」红（两腿同红）。本留档引用 pytest 汇总行时带出了该词面（K4 禁止的第四态词） | 改为「另 3 项按设计略过」，保留实测数字含义而不带禁用词面 |
+| **D17** | K58 门把 site-packages 按 **Windows 布局**硬拼 | ubuntu 腿 "装态 audit 退出码 2"——Linux 的布局是 `lib/python3.12/site-packages`，样本路径不存在 | 改为**问解释器本身**（`python -c "import auditor.data; print(...)"`），跨平台一致 |
+
+### 5.3 Release
+
+| 项 | 值 |
+|---|---|
+| Release | `v0.1.2`（**Latest**），6 个附件 |
+| 创建→重打 | 首版建在旧 tag 上；挪 tag 后 GitHub 把 Release 降级为 **Draft**，需 `gh release edit --draft=false --latest` 恢复并置 Latest |
+
+**附件 sha256（API digest = 本地实算 = 台账，三方一致）**：
+
+| 附件 | 大小 | sha256 |
+|---|---|---|
+| `auditor-v0.1.2-win64.zip` | 85,350,597 B | `755a8f484096ae4d301a8ab07852e485a5fac720d7cbcf2c3b7367f8cc07719c` |
+| `auditor-v0.1.2-win64-sha256.txt` | 451 B | `3641b20575940196d8052991c5c4ee4b92640eba63183dcd457cfe24d7e4662d` |
+| `auditor-source-v0.1.2.zip` | 422,327 B | `778790badd10f1f439e6b2475adae387920c5ede0a22f7d8f14bfa61ba1160ed` |
+| `demo-clean-vs-error.gif` | 103,251 B | `cf516f8a03b454bfb29dbd2cfb145dc6ceba68089956b45f33d794e65ac2cb7f` |
+| `demo-clean-report.html` | 3,354 B | `b29ebfbca3c45c5feafd33c09a7dcf88a1713b52b3d32d27afbb564cf0b82a28` |
+| `demo-error-report.html` | 3,376 B | `0c12071730236f8cc18145d3114077eb45453de2e2f3133922f83bab59d1944f` |
+
+### 5.4 真下载复核（API 通道，6/6 全部实下）
+
+| 检查 | 结果 |
+|---|---|
+| 6 个附件实下 | ✅ 全部 200，字节数与 API 一致 |
+| sha256 三方对撞 | ✅ API digest = 本地实算 = 台账，**6/6 相同** |
+| `sha256sum -c`（台账自校验） | ✅ **5/5 OK, RC=0**（**D15 修复后才通**——见下） |
+| 源码包 vs tag 树 | ✅ 150 文件 == 150 文件 |
+| 中立目录 CLI 冒烟 | ✅ `selftest` exit 0；`bench` exit 0（100.00% / 0.00% / 总体: 通过 ✓） |
+| 中立目录 GUI 冒烟 | ✅ `--selftest` exit 0（ok=12 invalid=0 + 三格式导出） |
+| demo HTML 外链 | ✅ 0 处命中 |
+
+### 5.5 本轮新发现的缺陷 D15（发布台账 CRLF）
+
+- **现象**：`tools/make_release_zip.py` 用 `write_text()` 写 sha256 台账，
+  Windows 上把 `\n` 翻成 `\r\n` → **发布出去的台账是 CRLF**。
+- **后果（实测）**：`sha256sum -c <台账>` 在 Linux/Git Bash 上逐条
+  `FAILED open or read`（`\r` 被当成文件名的一部分）——
+  **"给用户的那把尺子"在用户那边是坏的**。
+  v0.1.1 的台账同样是 CRLF（潜伏至今，从未被发现）。
+- **修法**：显式 `newline=""` 写 LF；新增 **K59 四条门**
+  （生成器写 LF / 已产出台账无 CRLF / 行格式合 GNU coreutils / 台账 sha256 与实算逐条一致）。
+- **连带**：K59 首跑时把 v0.1.2 已上传的 CRLF 台账照了出来 →
+  修生成器 + 重写台账 + `--clobber` 重传（451 B，LF）。
+
+> 另记一条**通道坑**：`curl` 直连 `releases/download/...` 命中了**旧的 CDN 缓存**
+> （取回 456 B 的 CRLF 版本，而 API digest 已是 451 B 的 LF 版本）。
+> 改走 `gh api -H "Accept: application/octet-stream"` 才拿到真件。
+> **"下载到的字节"与"API 声明的 digest"不一致时，先怀疑 CDN 缓存**，
+> 别急着判"上传坏了"。
+
+### 5.6 交付状态
+
+**「待复验」**——本轮由执行方自验并留档，尚未经独立复验。
